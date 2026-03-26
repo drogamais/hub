@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { generateAccessToken, generateRefreshTokenString, verifyAccessToken } = require('../lib/token');
 

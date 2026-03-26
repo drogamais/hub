@@ -5,22 +5,21 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# 2. Copia os arquivos de dependência e a pasta prisma (que tem o schema)
+# 4. Instala as dependências
 COPY package*.json ./
-COPY prisma ./prisma/
-
-# 3. Instala TODAS as dependências primeiro. 
-# Precisamos do 'prisma' que está nas devDependencies para gerar o client
 RUN npm ci
 
-# 4. Gera o Prisma Client
+# 4.1 Gera o Prisma Client (necessita da pasta prisma)
+COPY prisma ./prisma/
 RUN npx prisma generate
 
-# 4.5 Gera o CSS a partir do Tailwind (precisa do node_modules para rodar o comando)
-RUN npm run build:css
-
-# 5. Copia o resto do código da aplicação
+# 5. COPIA TODO O CÓDIGO FONTE (Incluindo a pasta src)
+# Isso deve vir ANTES do build do CSS
 COPY . .
+
+# 6. GERA O CSS FINAL
+# Agora o Docker encontrará o caminho ./src/public/css/input.css
+RUN npm run build:css
 
 # 6. Limpa as dependências de dev (deixa a imagem mais leve)
 RUN npm prune --omit=dev
