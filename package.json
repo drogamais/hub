@@ -4,8 +4,10 @@
   "description": "Hub Central Drogamais – Fastify SSR",
   "main": "src/server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+  "dev": "node --watch src/server.js",
+  "start": "node src/server.js",
+  "build:css": "tailwindcss -i ./src/public/css/input.css -o ./src/public/css/style.css --minify",
+  "watch:css": "tailwindcss -i ./src/public/css/input.css -o ./src/public/css/style.css --watch"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -20,7 +22,10 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "prisma": "^4.15.0"
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "prisma": "^4.15.0",
+    "tailwindcss": "^4.2.2"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

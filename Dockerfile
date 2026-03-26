@@ -16,6 +16,9 @@ RUN npm ci
 # 4. Gera o Prisma Client
 RUN npx prisma generate
 
+# 4.5 Gera o CSS a partir do Tailwind (precisa do node_modules para rodar o comando)
+RUN npm run build:css
+
 # 5. Copia o resto do código da aplicação
 COPY . .
 

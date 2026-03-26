@@ -20,6 +20,11 @@ fastify.register(require('@fastify/view'), {
   engine: { ejs: require('ejs') },
   root: path.join(__dirname, 'views'),
 });
+// Registrar o plugin de arquivos estáticos
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'public'),
+  prefix: '/public/', // O navegador buscará em /public/css/style.css
+});
 
 // Lightweight CORS handling without external plugin (compatible with Fastify v5)
 fastify.addHook('onRequest', async (request, reply) => {
