@@ -7,7 +7,7 @@ const appsController = {
     try {
       const apps = await prisma.app.findMany({ orderBy: { nome: 'asc' } });
       if (request.headers['hx-request']) {
-        return reply.view('partials/app-table-rows', { apps });
+        return reply.view('partials/app-table-rows', { apps, user: request.user });
       }
       return reply.send(apps);
     } catch (err) {
@@ -30,6 +30,7 @@ const appsController = {
 
   async create(request, reply) {
     try {
+      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
       const { nome, descricao, url, ativo, icone } = request.body || {};
       if (!nome) return reply.code(400).send({ detail: 'Nome é obrigatório.' });
 
@@ -45,6 +46,7 @@ const appsController = {
 
   async update(request, reply) {
     try {
+      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
       const id = parseInt(request.params.id, 10);
       const { nome, descricao, url, ativo, icone } = request.body || {};
       const existing = await prisma.app.findUnique({ where: { id } });
@@ -69,6 +71,7 @@ const appsController = {
 
   async delete(request, reply) {
     try {
+      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
       const id = parseInt(request.params.id, 10);
       const existing = await prisma.app.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ detail: 'Aplicação não encontrada.' });
