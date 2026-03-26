@@ -192,7 +192,13 @@ async function usersRoutes(fastify) {
     try {
       const id = parseInt(request.params.id, 10);
       const existing = await prisma.user.findUnique({ where: { id } });
+      
       if (!existing) return reply.code(404).send({ detail: 'Usuário não encontrado.' });
+
+      // TRAVA DE SEGURANÇA: Impede a deleção do usuário padrão
+      if (existing.email === 'admin@drogamais.com.br') {
+        return reply.code(403).send({ detail: 'Acesso negado: O usuário administrador padrão não pode ser deletado.' });
+      }
 
       await prisma.user.delete({ where: { id } });
       return reply.code(204).send();
