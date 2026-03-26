@@ -1,7 +1,6 @@
 const { verifyAccessToken } = require('../lib/token');
 
 async function authenticate(request, reply) {
-  // 1. Tenta pegar o token do cabeçalho (API) ou do Cookie (Navegador)
   const authHeader = request.headers.authorization;
   const cookieToken = request.cookies.sso_access_token;
   
@@ -13,8 +12,8 @@ async function authenticate(request, reply) {
   }
 
   if (!token) {
-    // Se for uma página HTML, redireciona para o login
-    if (request.routerPath?.startsWith('/app/')) {
+    // CORREÇÃO: Usamos request.url para garantir que a leitura não falha
+    if (request.url.startsWith('/app/')) {
       return reply.redirect('/login');
     }
     return reply.code(401).send({ detail: 'Token não fornecido.' });
@@ -25,7 +24,10 @@ async function authenticate(request, reply) {
     request.user = decoded; // Dados do utilizador disponíveis em todas as rotas
     request.userId = decoded.userId;
   } catch (err) {
-    if (request.routerPath?.startsWith('/app/')) return reply.redirect('/login');
+    // CORREÇÃO: Usamos request.url aqui também
+    if (request.url.startsWith('/app/')) {
+      return reply.redirect('/login');
+    }
     return reply.code(401).send({ detail: 'Token inválido ou expirado.' });
   }
 }
