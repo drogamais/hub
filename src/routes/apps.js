@@ -1,21 +1,24 @@
-const prisma = require('../lib/prisma');
+const appsController = require('../controllers/appsController');
 const { authenticate } = require('../middleware/auth');
 
 async function appsRoutes(fastify) {
+  // Todas rotas aqui exigem autenticação
   fastify.addHook('preHandler', authenticate);
 
-  // GET /api/apps/
-  fastify.get('/', async (request, reply) => {
-    try {
-      const apps = await prisma.app.findMany({
-        orderBy: { nome: 'asc' },
-      });
-      return reply.send(apps);
-    } catch (err) {
-      request.log.error(err);
-      return reply.code(500).send({ error: 'Erro ao buscar aplicações.' });
-    }
-  });
+  // GET /api/apps/ (list)
+  fastify.get('/', appsController.list);
+
+  // GET /api/apps/:id/
+  fastify.get('/:id/', appsController.getById);
+
+  // POST /api/apps/
+  fastify.post('/', appsController.create);
+
+  // PATCH /api/apps/:id/
+  fastify.patch('/:id/', appsController.update);
+
+  // DELETE /api/apps/:id/
+  fastify.delete('/:id/', appsController.delete);
 }
 
 module.exports = appsRoutes;

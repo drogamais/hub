@@ -29,6 +29,13 @@ async function pagesRoutes(fastify) {
       const users = await prisma.user.findMany();
       return reply.view('users.ejs', { user: request.user, users });
     });
+
+    // /app/apps — administração de aplicações (apenas admin)
+    protected.get('/app/apps', async (request, reply) => {
+      if (request.user.role !== 'admin') return reply.redirect('/app/hub');
+      const apps = await prisma.app.findMany({ orderBy: { nome: 'asc' } });
+      return reply.view('apps.ejs', { user: request.user, apps });
+    });
   });
 
   fastify.get('/', async (request, reply) => reply.redirect('/app/hub'));

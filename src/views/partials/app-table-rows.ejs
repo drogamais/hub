@@ -1,0 +1,23 @@
+<% apps.forEach(a => { %>
+  <tr id="app-row-<%= a.id %>" class="border-t border-slate-100 text-sm text-slate-700 hover:bg-slate-50">
+    <td class="px-5 py-4 font-semibold text-ink"><%= a.nome %></td>
+    <td class="px-5 py-4"><a href="<%= a.url %>" target="_blank" class="text-sid-600 hover:underline"><%= a.url %></a></td>
+    <td class="px-5 py-4"><%= a.descricao || '--' %></td>
+    <td class="px-5 py-4"><%= a.ativo ? 'Sim' : 'Não' %></td>
+    <td class="px-5 py-4">
+      <div class="flex gap-2">
+        <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" onclick="openEditModal('<%= a.id %>')">
+          Editar
+        </button>
+        <button class="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                onclick="deleteApp('<%= a.id %>')">
+          Excluir
+        </button>
+      </div>
+    </td>
+  </tr>
+<% }) %>
+
+<% if (apps.length === 0) { %>
+  <tr><td class="px-5 py-10 text-center text-sm text-slate-500" colspan="5">Nenhum aplicativo encontrado.</td></tr>
+<% } %>
