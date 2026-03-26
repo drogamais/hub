@@ -2,7 +2,6 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { generateAccessToken, generateRefreshTokenString } = require('../lib/token');
 
-// Função auxiliar para limpar dados do utilizador
 function sanitizeUser(user) {
   if (!user) return null;
   const u = { ...user };
@@ -27,29 +26,41 @@ const authController = {
     if (!isPasswordValid) return reply.code(401).send({ detail: 'Credenciais inválidas.' });
 
     const appIds = user.user_apps ? user.user_apps.map(ua => ua.app.id) : [];
-
+    
+    // 1. Gera o Access Token (com o setor)
     const access = generateAccessToken({ 
-    userId: user.id, 
-    role: user.role, 
-    first_name: user.first_name, 
-    last_name: user.last_name, 
-    setor: user.setor, // <-- Esta linha é a que resolve o sumiço da sidebar
-    appIds 
+      userId: user.id, role: user.role, first_name: user.first_name, 
+      last_name: user.last_name, setor: user.setor, appIds 
     });
 
-    // Cookie para o Hub (SSR)
-    reply.setCookie('sso_access_token', access, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 15 * 60 // 15 min
+    // 2. Gera e salva o Refresh Token no Banco (Recuperado!)
+    const refreshString = generateRefreshTokenString();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+    await prisma.refreshToken.create({ 
+      data: { token: refreshString, id_usuario: user.id, expires_at: expiresAt } 
     });
 
-    return reply.send({ access, user: sanitizeUser(user) });
+    // 3. Define os Cookies (para o SSR do Hub)
+    reply.setCookie('sso_access_token', access, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 15 * 60 });
+    // Guardamos o refresh em cookie para usar no endpoint de logout
+    reply.setCookie('sso_refresh_token', refreshString, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 });
+
+    // 4. Retorna AMBOS os tokens para o frontend poder redirecionar (SSO)
+    return reply.send({ access, refresh: refreshString, user: sanitizeUser(user) });
   },
 
   async logout(request, reply) {
+    // Tenta invalidar o refresh token no banco se estiver no cookie
+    const refreshToken = request.cookies.sso_refresh_token;
+    if (refreshToken) {
+      await prisma.refreshToken.updateMany({
+        where: { token: refreshToken },
+        data: { revoked: true }
+      });
+    }
+
     reply.clearCookie('sso_access_token', { path: '/' });
+    reply.clearCookie('sso_refresh_token', { path: '/' });
     return reply.send({ ok: true });
   }
 };

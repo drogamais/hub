@@ -1,22 +1,22 @@
-const bcrypt = require('bcryptjs'); // Usando a versão que limpou os logs
+const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 
 const PAGE_SIZE = 20;
+const PROTECTED_EMAILS = ['ti@drogamais.com.br', 'inteligencia@drogamais.com.br']; // Protege a seed
 
-// Função auxiliar para limpar dados sensíveis
 const sanitizeUser = (user) => {
   if (!user) return null;
   const u = { ...user };
   delete u.password;
   if (u.user_apps && Array.isArray(u.user_apps)) {
-    u.aplicacoes = u.user_apps.map(ua => ua.app).filter(Boolean).map(a => ({ id: a.id, nome: a.nome }));
+    u.aplicacoes = u.user_apps.map(ua => ua.app).filter(Boolean);
     delete u.user_apps;
   }
   return u;
 };
 
 const userController = {
-  // Lista utilizadores (Suporta API e HTMX)
+  // Lista todos (para a tabela HTMX)
   async list(request, reply) {
     const page = Math.max(1, parseInt(request.query.page || '1', 10));
     const search = request.query.search || '';
@@ -33,51 +33,95 @@ const userController = {
     const [count, rows] = await Promise.all([
       prisma.user.count({ where }),
       prisma.user.findMany({
-        where,
-        skip: offset,
-        take: PAGE_SIZE,
-        include: { user_apps: { include: { app: { select: { id: true, nome: true } } } } },
+        where, skip: offset, take: PAGE_SIZE,
+        include: { user_apps: { include: { app: true } } },
       }),
     ]);
 
     const results = rows.map(sanitizeUser);
-
-    // LÓGICA HTMX: Se for uma busca via HTMX, renderiza apenas a tabela
     if (request.headers['hx-request']) {
       return reply.view('partials/user-table-rows', { users: results });
     }
-
     return { count, results, totalPages: Math.ceil(count / PAGE_SIZE) };
   },
 
+  // Retorna os dados para preencher o Modal de Edição
+  async getById(request, reply) {
+    const id = parseInt(request.params.id, 10);
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { user_apps: { include: { app: true } } }
+    });
+    if (!user) return reply.code(404).send({ detail: 'Usuário não encontrado.' });
+    return reply.send(sanitizeUser(user));
+  },
+
+  // Cria um usuário novo e salva os cards (aplicacoes)
   async create(request, reply) {
-    const { email, password, first_name, last_name, role, setor } = request.body;
+    const { email, password, first_name, last_name, role, setor, is_active, aplicacoes } = request.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
-        username: email.toLowerCase(),
-        password: hashedPassword,
-        first_name, last_name, role, setor
-      }
+        email: email.toLowerCase(), username: email.toLowerCase(),
+        password: hashedPassword, first_name, last_name, role, setor,
+        is_active: is_active ?? true,
+        // Salva as marcações de aplicativos
+        user_apps: {
+          create: (aplicacoes || []).map(appId => ({ id_aplicacao: appId }))
+        }
+      },
+      include: { user_apps: { include: { app: true } } }
     });
     return reply.code(201).send(sanitizeUser(user));
   },
 
+  // Edita o usuário e seus cards
+  async update(request, reply) {
+    const id = parseInt(request.params.id, 10);
+    const { email, password, first_name, last_name, role, setor, is_active, aplicacoes } = request.body;
+    
+    const currentUser = await prisma.user.findUnique({ where: { id } });
+    if (!currentUser) return reply.code(404).send({ detail: 'Usuário não encontrado.' });
+
+    // Impede edição dos Super Admins
+    if (PROTECTED_EMAILS.includes(currentUser.email)) {
+      return reply.code(403).send({ detail: 'Os Super Administradores da matriz não podem ser alterados.' });
+    }
+
+    const updateData = { first_name, last_name, role, setor, is_active };
+    if (email) { updateData.email = email.toLowerCase(); updateData.username = email.toLowerCase(); }
+    if (password) { updateData.password = await bcrypt.hash(password, 10); }
+
+    await prisma.user.update({ where: { id }, data: updateData });
+
+    // Atualiza os apps (Deleta os antigos e insere os novos marcados)
+    if (aplicacoes && Array.isArray(aplicacoes)) {
+      await prisma.user_app.deleteMany({ where: { id_usuario: id } });
+      if (aplicacoes.length > 0) {
+        await prisma.user_app.createMany({
+          data: aplicacoes.map(appId => ({ id_usuario: id, id_aplicacao: appId }))
+        });
+      }
+    }
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { id }, include: { user_apps: { include: { app: true } } }
+    });
+    return reply.send(sanitizeUser(updatedUser));
+  },
+
+  // Deleta o usuário (Protegendo a Seed)
   async delete(request, reply) {
     const id = parseInt(request.params.id, 10);
     const user = await prisma.user.findUnique({ where: { id } });
 
-    if (user?.email === 'admin@drogamais.com.br') {
-      return reply.code(403).send({ detail: 'Não pode apagar o admin principal.' });
+    if (user && PROTECTED_EMAILS.includes(user.email)) {
+      return reply.code(403).send({ detail: 'Os Super Administradores da matriz não podem ser apagados.' });
     }
 
     await prisma.user.delete({ where: { id } });
-    
-    // HTMX: Se apagarmos via HTMX, retornamos vazio para remover a linha da tabela
     if (request.headers['hx-request']) return ''; 
-    
     return reply.code(204).send();
   }
 };
