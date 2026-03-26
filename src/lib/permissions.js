@@ -29,12 +29,12 @@ async function resolveAppPermissionsForUser(userId) {
   const groupId = user.groupId || null;
   const groupMap = {};
   if (groupId) {
-    const gaps = await prisma.group_app.findMany({ where: { id_grupo: groupId } });
+    const gaps = await prisma.groupApp.findMany({ where: { id_grupo: groupId } });
     gaps.forEach(g => { groupMap[g.id_aplicacao] = g.permissao || 'normal'; });
   }
 
   // Load user exceptions
-  const uapps = await prisma.user_app.findMany({ where: { id_usuario: userId } });
+  const uapps = await prisma.userApp.findMany({ where: { id_usuario: userId } });
   const userMap = {};
   uapps.forEach(u => { userMap[u.id_aplicacao] = u.permissao || 'normal'; });
 

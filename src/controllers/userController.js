@@ -101,9 +101,9 @@ const userController = {
 
     // Atualiza os apps (Deleta os antigos e insere os novos marcados)
     if (aplicacoes && Array.isArray(aplicacoes)) {
-      await prisma.user_app.deleteMany({ where: { id_usuario: id } });
+      await prisma.userApp.deleteMany({ where: { id_usuario: id } });
       if (aplicacoes.length > 0) {
-        await prisma.user_app.createMany({
+        await prisma.userApp.createMany({
           data: aplicacoes.map(appId => ({ id_usuario: id, id_aplicacao: appId }))
         });
       }

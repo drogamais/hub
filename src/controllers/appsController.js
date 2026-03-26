@@ -48,7 +48,7 @@ const appsController = {
       // Persist group mappings
       if (Array.isArray(grupos)) {
         const toCreate = grupos.filter(g => g.permissao && g.permissao !== 'none').map(g => ({ id_grupo: g.id_grupo, id_aplicacao: app.id, permissao: g.permissao }));
-          if (toCreate.length > 0) await prisma.group_app.createMany({ data: toCreate });
+        if (toCreate.length > 0) await prisma.groupApp.createMany({ data: toCreate });
       }
 
       // Persist user exceptions
@@ -57,14 +57,14 @@ const appsController = {
           const uid = parseInt(u.id_usuario, 10);
           const p = u.permissao;
           if (!uid) continue;
-            if (!p || p === 'inherit') {
-              await prisma.user_app.deleteMany({ where: { id_usuario: uid, id_aplicacao: app.id } });
+          if (!p || p === 'inherit') {
+            await prisma.userApp.deleteMany({ where: { id_usuario: uid, id_aplicacao: app.id } });
           } else {
-              await prisma.user_app.upsert({
-                where: { id_usuario_id_aplicacao: { id_usuario: uid, id_aplicacao: app.id } },
-                create: { id_usuario: uid, id_aplicacao: app.id, permissao: p },
-                update: { permissao: p }
-              });
+            await prisma.userApp.upsert({
+              where: { id_usuario_id_aplicacao: { id_usuario: uid, id_aplicacao: app.id } },
+              create: { id_usuario: uid, id_aplicacao: app.id, permissao: p },
+              update: { permissao: p }
+            });
           }
         }
       }
@@ -97,9 +97,9 @@ const appsController = {
 
       // Update group mappings
       if (Array.isArray(grupos)) {
-        await prisma.group_app.deleteMany({ where: { id_aplicacao: id } });
+        await prisma.groupApp.deleteMany({ where: { id_aplicacao: id } });
         const toCreate = grupos.filter(g => g.permissao && g.permissao !== 'none').map(g => ({ id_grupo: g.id_grupo, id_aplicacao: id, permissao: g.permissao }));
-          if (toCreate.length > 0) await prisma.group_app.createMany({ data: toCreate });
+        if (toCreate.length > 0) await prisma.groupApp.createMany({ data: toCreate });
       }
 
       // Update user exceptions
@@ -108,14 +108,14 @@ const appsController = {
           const uid = parseInt(u.id_usuario, 10);
           const p = u.permissao;
           if (!uid) continue;
-            if (!p || p === 'inherit') {
-              await prisma.user_app.deleteMany({ where: { id_usuario: uid, id_aplicacao: id } });
+          if (!p || p === 'inherit') {
+            await prisma.userApp.deleteMany({ where: { id_usuario: uid, id_aplicacao: id } });
           } else {
-              await prisma.user_app.upsert({
-                where: { id_usuario_id_aplicacao: { id_usuario: uid, id_aplicacao: id } },
-                create: { id_usuario: uid, id_aplicacao: id, permissao: p },
-                update: { permissao: p }
-              });
+            await prisma.userApp.upsert({
+              where: { id_usuario_id_aplicacao: { id_usuario: uid, id_aplicacao: id } },
+              create: { id_usuario: uid, id_aplicacao: id, permissao: p },
+              update: { permissao: p }
+            });
           }
         }
       }

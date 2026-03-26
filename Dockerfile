@@ -26,4 +26,4 @@ RUN npm prune --omit=dev
 
 # 7. O Pulo do Gato: Roda as migrations pendentes e DEPOIS inicia o app
 # Tudo na mesma linha, sem precisar de entrypoint.sh!
-CMD ["sh","-c","npx prisma migrate deploy || echo \"migrate failed\" && node src/server.js"]
+CMD ["sh","-c","npx prisma db push || echo \"db push failed\"; npx prisma generate || echo \"prisma generate failed\"; node prisma/seed.js || echo \"seed failed\"; node src/server.js"]

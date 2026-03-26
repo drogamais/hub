@@ -49,6 +49,44 @@ async function main() {
     
     console.log(`✅ Super Admin garantido: ${user.email} (Setor: ${user.setor})`);
   }
+  // --- Groups and sample apps for RBAC ---
+  const groupNames = ['TI', 'INTELIGÊNCIA DE MERCADO', 'COMERCIAL', 'FINANCEIRO', 'MARKETING'];
+  await prisma.group.createMany({ data: groupNames.map(n => ({ nome: n })), skipDuplicates: true });
+  const createdGroups = await prisma.group.findMany({ where: { nome: { in: groupNames } } });
+
+  // Ensure some sample apps exist
+  const sampleApps = [
+    { nome: 'SID', url: 'https://sid.local', descricao: 'Sid Application' },
+    { nome: 'Campanhas', url: 'https://campanhas.local', descricao: 'Campanhas App' }
+  ];
+  await prisma.app.createMany({ data: sampleApps, skipDuplicates: true });
+  const createdApps = await prisma.app.findMany({ where: { nome: { in: sampleApps.map(a => a.nome) } } });
+
+  // Create some default group->app mappings
+  const grupoMap = {};
+  createdGroups.forEach(g => { grupoMap[g.nome] = g.id; });
+  const appMap = {};
+  createdApps.forEach(a => { appMap[a.nome] = a.id; });
+
+  const groupAppData = [];
+  if (grupoMap['TI']) {
+    // TI has admin on everything we seeded
+    if (appMap['SID']) groupAppData.push({ id_grupo: grupoMap['TI'], id_aplicacao: appMap['SID'], permissao: 'admin' });
+    if (appMap['Campanhas']) groupAppData.push({ id_grupo: grupoMap['TI'], id_aplicacao: appMap['Campanhas'], permissao: 'admin' });
+  }
+  if (grupoMap['COMERCIAL'] && appMap['Campanhas']) {
+    groupAppData.push({ id_grupo: grupoMap['COMERCIAL'], id_aplicacao: appMap['Campanhas'], permissao: 'normal' });
+  }
+
+  if (groupAppData.length > 0) {
+    await prisma.groupApp.createMany({ data: groupAppData, skipDuplicates: true });
+  }
+
+  // Assign super admins to TI group if present
+  if (grupoMap['TI']) {
+    await prisma.user.updateMany({ where: { email: 'ti@drogamais.com.br' }, data: { groupId: grupoMap['TI'] } });
+    await prisma.user.updateMany({ where: { email: 'inteligencia@drogamais.com.br' }, data: { groupId: grupoMap['TI'] } });
+  }
 
   console.log('🎉 Seed finalizado com sucesso!');
 }
