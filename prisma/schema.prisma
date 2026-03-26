@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  general
+}
+
+model User {
+  id                 Int                  @id @default(autoincrement())
+  username           String               @unique
+  email              String               @unique
+  password           String
+  first_name         String               @default("")
+  last_name          String               @default("")
+  role               UserRole             @default(general)
+  setor              String?
+  is_active          Boolean              @default(true)
+
+  refresh_tokens     RefreshToken[]
+  authorization_codes AuthorizationCode[]
+  user_apps          UserApp[]
+
+  @@map("dim_users")
+}
+
+model App {
+  id            Int       @id @default(autoincrement())
+  nome          String
+  descricao     String?
+  url           String
+  icone         String?   @default("web")
+  client_id     String?   @unique
+  client_secret String?
+  redirect_uris String?
+  allowed_origins String?
+  ativo         Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  refresh_tokens RefreshToken[]
+  authorization_codes AuthorizationCode[]
+  user_apps      UserApp[]
+
+  @@map("dim_aplicacao")
+}
+
+model UserApp {
+  id_usuario   Int
+  id_aplicacao Int
+
+  user User @relation(fields: [id_usuario], references: [id])
+  app  App  @relation(fields: [id_aplicacao], references: [id])
+
+  @@id([id_usuario, id_aplicacao])
+  @@map("rel_usuario_aplicacao")
+}
+
+model RefreshToken {
+  id           Int      @id @default(autoincrement())
+  token        String   @unique
+  id_usuario   Int
+  id_aplicacao Int?
+  issued_at    DateTime @default(now())
+  last_used_at DateTime?
+  metadata     Json?
+  revoked      Boolean  @default(false)
+  expires_at   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [id_usuario], references: [id])
+  app  App? @relation(fields: [id_aplicacao], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model AuthorizationCode {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  id_usuario   Int
+  id_aplicacao Int?
+  redirect_uri String?
+  used         Boolean  @default(false)
+  expires_at   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [id_usuario], references: [id])
+  app  App? @relation(fields: [id_aplicacao], references: [id])
+
+  @@map("authorization_codes")
+}

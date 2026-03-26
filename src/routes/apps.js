@@ -1,4 +1,4 @@
-const { App } = require('../models');
+const prisma = require('../lib/prisma');
 const { authenticate } = require('../middleware/auth');
 
 async function appsRoutes(fastify) {
@@ -6,10 +6,15 @@ async function appsRoutes(fastify) {
 
   // GET /api/apps/
   fastify.get('/', async (request, reply) => {
-    const apps = await App.findAll({
-      order: [['nome', 'ASC']],
-    });
-    return reply.send(apps);
+    try {
+      const apps = await prisma.app.findMany({
+        orderBy: { nome: 'asc' },
+      });
+      return reply.send(apps);
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ error: 'Erro ao buscar aplicações.' });
+    }
   });
 }
 

@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const path = require('path');
 const fastify = require('fastify')({ logger: true });
-const sequelize = require('./config/database');
+const prisma = require('./lib/prisma');
 
 // --- Environment checks (fail fast when secrets missing) ---
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
@@ -55,11 +55,8 @@ const PORT = process.env.PORT || 8003;
 
 async function start() {
   try {
-    await sequelize.authenticate();
-    console.log('✅ Conexão com MariaDB estabelecida.');
-
-    await sequelize.sync({ alter: false });
-    console.log('✅ Tabelas sincronizadas.');
+    await prisma.$connect();
+    console.log('✅ Conexão com banco via Prisma estabelecida.');
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`🚀 Hub rodando em http://localhost:${PORT}`);
