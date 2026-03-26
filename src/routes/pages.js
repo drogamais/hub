@@ -1,31 +1,37 @@
-// ─── Rotas SSR de páginas HTML (EJS) ─────────────────────────────
+const { authenticate } = require('../middleware/auth');
+const prisma = require('../lib/prisma');
+
 async function pagesRoutes(fastify) {
+  // Rotas públicas
+  fastify.get('/login', async (request, reply) => reply.view('login.ejs'));
 
-  // GET /login  → tela de login
-  fastify.get('/login', async (request, reply) => {
-    return reply.view('login.ejs');
+  // Rotas protegidas (Usa o novo authenticate)
+  fastify.register(async function(protected) {
+    protected.addHook('preHandler', authenticate);
+
+    protected.get('/app/hub', async (request, reply) => {
+      // Busca apps permitidos para este utilizador específico
+      const userWithApps = await prisma.user.findUnique({
+        where: { id: request.userId },
+        include: { user_apps: { include: { app: true } } }
+      });
+      
+      return reply.view('hub.ejs', { 
+        user: request.user, 
+        apps: userWithApps.user_apps.map(ua => ua.app) 
+      });
+    });
+
+    protected.get('/app/users', async (request, reply) => {
+      // Apenas admins podem entrar aqui
+      if (request.user.role !== 'admin') return reply.redirect('/app/hub');
+      
+      const users = await prisma.user.findMany();
+      return reply.view('users.ejs', { user: request.user, users });
+    });
   });
 
-  // GET /app/hub → tela do Hub (apps do usuário)
-  fastify.get('/app/hub', async (request, reply) => {
-    return reply.view('hub.ejs');
-  });
-
-  // GET /app/users → gerenciamento de usuários (admin)
-  fastify.get('/app/users', async (request, reply) => {
-    return reply.view('users.ejs');
-  });
-
-  // GET / → redireciona para /app/hub
-  fastify.get('/', async (request, reply) => {
-    return reply.redirect('/app/hub');
-  });
-
-  // POST /api/auth/logout → limpa o cookie HttpOnly
-  fastify.post('/api/auth/logout', async (request, reply) => {
-    reply.clearCookie('sso_access_token', { path: '/' });
-    return reply.send({ ok: true });
-  });
+  fastify.get('/', async (request, reply) => reply.redirect('/app/hub'));
 }
 
 module.exports = pagesRoutes;
