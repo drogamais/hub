@@ -21,7 +21,11 @@ model User {
   last_name          String               @default("")
   role               UserRole             @default(general)
   setor              String?
+  groupId            Int?
   is_active          Boolean              @default(true)
+
+  // relation to Group (department)
+  group              Group?               @relation(fields: [groupId], references: [id])
 
   refresh_tokens     RefreshToken[]
   authorization_codes AuthorizationCode[]
@@ -47,6 +51,7 @@ model App {
   refresh_tokens RefreshToken[]
   authorization_codes AuthorizationCode[]
   user_apps      UserApp[]
+  group_apps     GroupApp[]
 
   @@map("dim_aplicacao")
 }
@@ -54,12 +59,35 @@ model App {
 model UserApp {
   id_usuario   Int
   id_aplicacao Int
+  permissao    String   @default("normal")
 
   user User @relation(fields: [id_usuario], references: [id])
   app  App  @relation(fields: [id_aplicacao], references: [id])
 
   @@id([id_usuario, id_aplicacao])
   @@map("rel_usuario_aplicacao")
+}
+
+model Group {
+  id    Int      @id @default(autoincrement())
+  nome  String   @unique
+
+  users    User[]
+  group_apps GroupApp[]
+
+  @@map("dim_grupo")
+}
+
+model GroupApp {
+  id_grupo    Int
+  id_aplicacao Int
+  permissao   String @default("normal")
+
+  group Group @relation(fields: [id_grupo], references: [id])
+  app   App   @relation(fields: [id_aplicacao], references: [id])
+
+  @@id([id_grupo, id_aplicacao])
+  @@map("rel_grupo_aplicacao")
 }
 
 model RefreshToken {
