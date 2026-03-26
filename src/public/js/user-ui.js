@@ -50,7 +50,9 @@ document.querySelector('button[onclick="openModal()"]').addEventListener('click'
 // 3. Ação de Clicar em EDITAR (Adicione `onclick="openEditModal(<%= u.id %>)"` no botão "Editar" do seu ficheiro partials/user-table-rows.ejs)
 window.openEditModal = async function(id) {
     try {
-        const res = await fetch(`/api/users/${id}/`);
+        // A BARRA NO FINAL É CRUCIAL PARA O FASTIFY RESPONDER
+        const res = await fetch(`/api/users/${id}/`); 
+        
         if (!res.ok) throw new Error('Falha ao carregar usuário.');
         const u = await res.json();
 
@@ -70,7 +72,9 @@ window.openEditModal = async function(id) {
         renderAppsCheckboxes(selectedAppIds);
 
         openModal();
-    } catch (err) { alert(err.message); }
+    } catch (err) { 
+        alert(err.message); 
+    }
 };
 
 // 4. Salvar (POST ou PATCH)

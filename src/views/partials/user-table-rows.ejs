@@ -5,16 +5,27 @@
     <td class="px-5 py-4 capitalize"><%= u.role %></td>
     <td class="px-5 py-4 text-xs font-semibold text-slate-500"><%= u.setor || '--' %></td>
     <td class="px-5 py-4">
-      <div class="flex gap-2">
-        <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white">Editar</button>
-        <button class="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
-                hx-delete="/api/users/<%= u.id %>"
-                hx-target="#user-row-<%= u.id %>"
-                hx-swap="outerHTML"
-                hx-confirm="Deseja realmente excluir este usuário?">
-          Excluir
-        </button>
-      </div>
+      
+      <% if (['ti@drogamais.com.br', 'inteligencia@drogamais.com.br'].includes(u.email)) { %>
+        <span class="inline-flex rounded-xl bg-slate-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-200 cursor-not-allowed" title="Este usuário não pode ser alterado">
+          🛡️ Usuário Protegido
+        </span>
+      <% } else { %>
+        <div class="flex gap-2">
+          <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" onclick="openEditModal('<%= u.id %>')">
+            Editar
+          </button>
+          
+          <button class="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                  hx-delete="/api/users/<%= u.id %>/"
+                  hx-target="#user-row-<%= u.id %>"
+                  hx-swap="outerHTML"
+                  hx-confirm="Deseja realmente excluir este usuário?">
+            Excluir
+          </button>
+        </div>
+      <% } %>
+
     </td>
   </tr>
 <% }) %>
