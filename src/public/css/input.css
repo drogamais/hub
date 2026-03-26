@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  /* Suas cores personalizadas da Drogamais */
+  --color-sid-50: #fef2f2;
+  --color-sid-100: #fee2e2;
+  --color-sid-200: #fecaca;
+  --color-sid-500: #c42c2c;
+  --color-sid-600: #b91c1c;
+  --color-sid-700: #991b1b;
+  
+  --color-ink: #1e293b;
+
+  /* Sua sombra personalizada */
+  --shadow-panel: 0 8px 30px rgba(0,0,0,.06);
+}
+
+/* Import da fonte Inter que você já usa */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
