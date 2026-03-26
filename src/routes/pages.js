@@ -10,12 +10,12 @@ async function pagesRoutes(fastify) {
     protected.addHook('preHandler', authenticate);
 
     protected.get('/app/hub', async (request, reply) => {
-      // Busca apps permitidos para este utilizador específico
       const userWithApps = await prisma.user.findUnique({
         where: { id: request.userId },
         include: { user_apps: { include: { app: true } } }
       });
-      
+
+      // Você PRECISA passar o 'user: request.user' aqui
       return reply.view('hub.ejs', { 
         user: request.user, 
         apps: userWithApps.user_apps.map(ua => ua.app) 

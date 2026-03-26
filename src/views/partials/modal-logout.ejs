@@ -1,0 +1,23 @@
+<div id="logoutModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
+  <div class="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+    <div class="mb-6 text-center">
+      <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 text-xl">🚪</div>
+      <h3 class="text-xl font-bold text-ink">Encerrar sessão?</h3>
+      <p class="mt-2 text-sm text-slate-500">Você precisará fazer login novamente para acessar o Hub.</p>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="closeLogoutModal()" class="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Não, voltar</button>
+      <button onclick="confirmLogout()" class="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-semibold text-white hover:bg-red-700">Sim, sair</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showLogoutModal() { document.getElementById('logoutModal').classList.replace('hidden', 'flex'); }
+  function closeLogoutModal() { document.getElementById('logoutModal').classList.replace('flex', 'hidden'); }
+  async function confirmLogout() {
+      await fetch('/api/auth/logout/', { method: 'POST' });
+      localStorage.clear();
+      window.location.href = '/login';
+  }
+</script>

@@ -6,47 +6,19 @@
   <title>Hub Drogamais – Login</title>
   <meta name="description" content="Acesso centralizado às intranets Drogamais. Faça login uma única vez." />
   <link rel="stylesheet" href="/public/css/style.css">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            sid: {
-              50:  '#fef2f2',
-              100: '#fee2e2',
-              200: '#fecaca',
-              500: '#c42c2c',
-              600: '#b91c1c',
-              700: '#991b1b',
-            },
-            ink: '#1e293b',
-          },
-          boxShadow: {
-            panel: '0 8px 30px rgba(0,0,0,.06)',
-          },
-        },
-      },
-    };
-  </script>
-  <style>
-    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-  </style>
 </head>
-<body>
+<body class="font-sans">
   <div class="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#ffdede,_#f4f6f9_55%)] px-6">
     <div class="grid w-full max-w-5xl overflow-hidden rounded-[32px] bg-white shadow-panel lg:grid-cols-[1.2fr_0.8fr]">
 
-      <!-- Painel esquerdo (branding) -->
       <section class="hidden bg-sid-700 px-10 py-12 text-white lg:block">
         <p class="text-sm uppercase tracking-[0.3em] text-red-100">Drogamais</p>
         <h1 class="mt-6 max-w-sm text-5xl font-black leading-tight">Hub Central de Intranets Drogamais</h1>
         <p class="mt-6 max-w-md text-base text-red-50/90">
-          Acesso unificado (SSO). Faça login uma única vez e acesse o SID, Campanhas, Auditoria e ferramentas em Python sem precisar de novas senhas.
+          Acesso unificado (SSO). Faça login uma única vez e acesse o SID, Campanhas, Auditoria e ferramentas sem precisar de novas senhas.
         </p>
       </section>
 
-      <!-- Formulário -->
       <section class="px-8 py-10 sm:px-12">
         <div class="mb-10">
           <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sid-600 text-xl font-bold text-white">HUB</div>
@@ -59,6 +31,8 @@
             <label class="mb-2 block text-sm font-medium text-slate-600">E-mail</label>
             <input
               id="emailInput"
+              type="email"
+              required
               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"
               placeholder="Digite seu e-mail"
               autocomplete="username"
@@ -70,6 +44,7 @@
             <input
               id="passwordInput"
               type="password"
+              required
               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"
               placeholder="Digite sua senha"
               autocomplete="current-password"
@@ -83,121 +58,14 @@
             type="submit"
             class="w-full rounded-2xl bg-sid-600 px-4 py-3 font-semibold text-white transition hover:bg-sid-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Acessar Intranets
+            Entrar
           </button>
         </form>
       </section>
-
     </div>
   </div>
 
-  <script>
-    // ─── Storage keys (compatíveis com o frontend React antigo) ──────
-    const ACCESS_KEY  = 'sid_access_token';
-    const REFRESH_KEY = 'sid_refresh_token';
-    const USER_KEY    = 'sid_user';
-
-    function saveSession(access, refresh, user) {
-      localStorage.setItem(ACCESS_KEY, access);
-      localStorage.setItem(REFRESH_KEY, refresh);
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    }
-
-    function getStoredUser() {
-      try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }
-    }
-
-    // ─── Redirect se já logado ───────────────────────────────────────
-    (function checkAlreadyLoggedIn() {
-      const user = getStoredUser();
-      if (!user) return;
-
-      const params  = new URLSearchParams(window.location.search);
-      const redirect = params.get('redirect');
-
-      if (redirect) {
-        const access  = localStorage.getItem(ACCESS_KEY) || '';
-        const refresh = localStorage.getItem(REFRESH_KEY) || '';
-        const userData = encodeURIComponent(JSON.stringify(user));
-        const separator = redirect.includes('?') ? '&' : '?';
-        window.location.href = redirect + separator + 'access_token=' + access + '&refresh_token=' + refresh + '&user=' + userData;
-      } else {
-        window.location.href = '/app/hub';
-      }
-    })();
-
-    // ─── Login via API / Authorization Code confirm ───────────────────
-    const form     = document.getElementById('loginForm');
-    const emailEl  = document.getElementById('emailInput');
-    const passEl   = document.getElementById('passwordInput');
-    const errorBox = document.getElementById('errorBox');
-    const btn      = document.getElementById('submitBtn');
-
-    const params = new URLSearchParams(window.location.search);
-    const client_id = params.get('client_id');
-    const redirect_uri = params.get('redirect_uri');
-    const state = params.get('state');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorBox.classList.add('hidden');
-      btn.disabled = true;
-      btn.textContent = 'Entrando...';
-
-      try {
-        if (client_id && redirect_uri) {
-          // Authorization Code confirm flow
-          const res = await fetch('/api/auth/authorize/confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: emailEl.value.trim().toLowerCase(),
-              password: passEl.value,
-              client_id,
-              redirect_uri,
-              state
-            }),
-          });
-
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || 'Não foi possível autenticar.');
-          // server returns redirect URL
-          window.location.href = data.redirect;
-        } else {
-          // normal login
-          const res = await fetch('/api/auth/login/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: emailEl.value.trim().toLowerCase(),
-              password: passEl.value,
-            }),
-          });
-
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || 'Não foi possível autenticar.');
-
-          saveSession(data.access, data.refresh, data.user);
-
-          const params   = new URLSearchParams(window.location.search);
-          const redirect = params.get('redirect');
-
-          if (redirect) {
-            const userData = encodeURIComponent(JSON.stringify(data.user));
-            const separator = redirect.includes('?') ? '&' : '?';
-            window.location.href = redirect + separator + 'access_token=' + data.access + '&refresh_token=' + data.refresh + '&user=' + userData;
-          } else {
-            window.location.href = '/app/hub';
-          }
-        }
-      } catch (err) {
-        errorBox.textContent = err.message;
-        errorBox.classList.remove('hidden');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Acessar Intranets';
-      }
-    });
-  </script>
+  <script src="/public/js/auth-shared.js"></script>
+  <script src="/public/js/login.js"></script>
 </body>
 </html>

@@ -91,13 +91,7 @@
   <div id="formModal" class="fixed inset-0 z-50 hidden items-start justify-center bg-slate-950/30 px-4 py-8">
      </div>
 
-  <script>
-    function openModal() { document.getElementById('formModal').classList.remove('hidden'); document.getElementById('formModal').classList.add('flex'); }
-    function closeModal() { document.getElementById('formModal').classList.add('hidden'); document.getElementById('formModal').classList.remove('flex'); }
-    
-    function handleLogout() {
-      fetch('/api/auth/logout', { method: 'POST' }).then(() => window.location.href = '/login');
-    }
-  </script>
+  <script src="/public/js/auth.js"></script>
+  <script src="/public/js/user-ui.js"></script>
 </body>
 </html>

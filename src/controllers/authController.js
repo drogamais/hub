@@ -27,7 +27,15 @@ const authController = {
     if (!isPasswordValid) return reply.code(401).send({ detail: 'Credenciais inválidas.' });
 
     const appIds = user.user_apps ? user.user_apps.map(ua => ua.app.id) : [];
-    const access = generateAccessToken({ userId: user.id, role: user.role, first_name: user.first_name, last_name: user.last_name, appIds });
+
+    const access = generateAccessToken({ 
+    userId: user.id, 
+    role: user.role, 
+    first_name: user.first_name, 
+    last_name: user.last_name, 
+    setor: user.setor, // <-- Esta linha é a que resolve o sumiço da sidebar
+    appIds 
+    });
 
     // Cookie para o Hub (SSR)
     reply.setCookie('sso_access_token', access, {
