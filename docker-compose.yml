@@ -1,0 +1,20 @@
+services:
+  hub:
+    build: 
+      context: ./
+      dockerfile: Dockerfile
+    container_name: hub
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - ./.env
+    restart: unless-stopped
+    networks:
+      - hub_net
+
+networks:
+  hub_net:
+    driver: bridge
