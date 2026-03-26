@@ -18,12 +18,23 @@
       </div>
 
       <nav class="flex-1 space-y-1 px-3 py-4">
+        
         <a href="/app/hub" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-          <span>📊</span> Aplicativos
+          <span>📊</span> Meu Hub
         </a>
-        <a href="/app/users" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-          <span>👥</span> Usuários
-        </a>
+
+        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
+          <a href="/app/apps" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+            <span>⚙️</span> Gerenciar Intranets
+          </a>
+        <% } %>
+
+        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
+          <a href="/app/users" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+            <span>👥</span> Usuários
+          </a>
+        <% } %>
+
       </nav>
 
       <div class="border-t border-slate-100 px-4 py-4">

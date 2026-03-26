@@ -15,14 +15,27 @@
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-sid-600 text-sm font-bold text-white">H</div>
         <span class="text-lg font-bold text-ink">Hub Drogamais</span>
       </div>
+      
       <nav class="flex-1 space-y-1 px-3 py-4">
+        
         <a href="/app/hub" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-          <span>📊</span> Aplicativos
+          <span>📊</span> Meu Hub
         </a>
-        <a href="/app/users" class="flex items-center gap-3 rounded-xl bg-sid-50 px-4 py-2.5 text-sm font-semibold text-sid-700">
-          <span>👥</span> Usuários
-        </a>
+
+        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
+          <a href="/app/apps" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+            <span>⚙️</span> Gerenciar Intranets
+          </a>
+        <% } %>
+
+        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
+          <a href="/app/users" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+            <span>👥</span> Usuários
+          </a>
+        <% } %>
+
       </nav>
+
       <div class="border-t border-slate-100 px-4 py-4">
         <div class="flex items-center gap-3">
           <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
