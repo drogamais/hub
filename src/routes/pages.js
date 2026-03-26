@@ -10,15 +10,26 @@ async function pagesRoutes(fastify) {
     protected.addHook('preHandler', authenticate);
 
     protected.get('/app/hub', async (request, reply) => {
-      const userWithApps = await prisma.user.findUnique({
-        where: { id: request.userId },
-        include: { user_apps: { include: { app: true } } }
-      });
+      let appsParaMostrar = [];
 
-      // Você PRECISA passar o 'user: request.user' aqui
+      if (request.user.role === 'admin') {
+        // Se for Admin, puxa TODOS os aplicativos ativos automaticamente
+        appsParaMostrar = await prisma.app.findMany({ 
+          where: { ativo: true },
+          orderBy: { nome: 'asc' }
+        });
+      } else {
+        // Se for usuário comum, puxa apenas os que ele tem permissão
+        const userWithApps = await prisma.user.findUnique({
+          where: { id: request.userId },
+          include: { user_apps: { include: { app: true } } }
+        });
+        appsParaMostrar = userWithApps.user_apps.map(ua => ua.app);
+      }
+
       return reply.view('hub.ejs', { 
         user: request.user, 
-        apps: userWithApps.user_apps.map(ua => ua.app) 
+        apps: appsParaMostrar 
       });
     });
 
