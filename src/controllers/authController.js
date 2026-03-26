@@ -73,6 +73,28 @@ const authController = {
     reply.clearCookie('sso_refresh_token', { path: '/' });
     return reply.send({ ok: true });
   }
+  ,
+  async refresh(request, reply) {
+    // Accept refresh token either from cookie or JSON body { refresh }
+    const refreshToken = request.cookies.sso_refresh_token || (request.body && request.body.refresh);
+    if (!refreshToken) return reply.code(400).send({ detail: 'refresh token required' });
+
+    const stored = await prisma.refreshToken.findFirst({ where: { token: refreshToken } });
+    if (!stored || stored.revoked) return reply.code(401).send({ detail: 'refresh invalid' });
+    if (stored.expires_at && new Date(stored.expires_at) < new Date()) {
+      return reply.code(401).send({ detail: 'refresh expired' });
+    }
+
+    // Load user to build access token payload
+    const user = await prisma.user.findUnique({ where: { id: stored.id_usuario } });
+    if (!user) return reply.code(401).send({ detail: 'user not found' });
+
+    const appIds = [];
+    const access = generateAccessToken({ userId: user.id, role: user.role, first_name: user.first_name, last_name: user.last_name, setor: user.setor, appIds });
+
+    // Return only access token (SID will set its own cookie)
+    return reply.send({ access });
+  }
 };
 
 module.exports = authController;
