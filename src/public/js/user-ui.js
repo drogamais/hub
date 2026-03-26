@@ -1,10 +1,21 @@
 let allApps = [];
+let groupsCache = [];
 
 // 1. Ao carregar a página, vai buscar as aplicações ao servidor
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res = await fetch('/api/apps/');
         if (res.ok) allApps = await res.json();
+        // load groups for user form
+        const g = await fetch('/api/apps/groups');
+        if (g.ok) groupsCache = await g.json();
+        const groupSelect = document.getElementById('f_group_id');
+        if (groupSelect && groupsCache.length) {
+            groupsCache.forEach(gr => {
+                const opt = document.createElement('option'); opt.value = gr.id; opt.text = gr.nome;
+                groupSelect.appendChild(opt);
+            });
+        }
     } catch (e) { console.error('Erro ao buscar apps', e); }
 });
 
@@ -44,7 +55,8 @@ document.querySelector('button[onclick="openModal()"]').addEventListener('click'
     document.getElementById('modalTitle').textContent = 'Novo usuário';
     document.getElementById('passwordLabel').textContent = 'Senha (Obrigatório)';
     document.getElementById('f_password').required = true;
-    renderAppsCheckboxes([]);
+    // set default group selection to empty
+    const groupSelect = document.getElementById('f_group_id'); if (groupSelect) groupSelect.value = '';
 });
 
 // 3. Ação de Clicar em EDITAR (Adicione `onclick="openEditModal(<%= u.id %>)"` no botão "Editar" do seu ficheiro partials/user-table-rows.ejs)
@@ -67,9 +79,9 @@ window.openEditModal = async function(id) {
         document.getElementById('f_role').value = u.role;
         document.getElementById('f_setor').value = u.setor || '';
         document.getElementById('f_is_active').checked = u.is_active;
-
         const selectedAppIds = u.aplicacoes ? u.aplicacoes.map(a => a.id) : [];
-        renderAppsCheckboxes(selectedAppIds);
+        // set selected group
+        const groupSelect = document.getElementById('f_group_id'); if (groupSelect) groupSelect.value = u.groupId || '';
 
         openModal();
     } catch (err) { 
@@ -97,7 +109,8 @@ document.getElementById('userForm').addEventListener('submit', async (e) => {
         role: document.getElementById('f_role').value,
         setor: document.getElementById('f_setor').value || null,
         is_active: document.getElementById('f_is_active').checked,
-        aplicacoes: selectedApps
+        aplicacoes: selectedApps,
+        groupId: parseInt(document.getElementById('f_group_id').value, 10) || null
     };
 
     if (pw) payload.password = pw;

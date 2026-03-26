@@ -19,12 +19,19 @@ async function pagesRoutes(fastify) {
           orderBy: { nome: 'asc' }
         });
       } else {
-        // Se for usuário comum, puxa apenas os que ele tem permissão
-        const userWithApps = await prisma.user.findUnique({
-          where: { id: request.userId },
-          include: { user_apps: { include: { app: true } } }
-        });
-        appsParaMostrar = userWithApps.user_apps.map(ua => ua.app);
+        // Prefer using appPermissions embedded in the JWT (computed at login/refresh)
+        const perms = request.user.appPermissions || null;
+        if (perms && Object.keys(perms).length > 0) {
+          const allowedNames = Object.entries(perms).filter(([k, v]) => v && v !== 'none').map(([k]) => k);
+          appsParaMostrar = await prisma.app.findMany({ where: { nome: { in: allowedNames }, ativo: true }, orderBy: { nome: 'asc' } });
+        } else {
+          // Fallback: use explicit user_apps relation
+          const userWithApps = await prisma.user.findUnique({
+            where: { id: request.userId },
+            include: { user_apps: { include: { app: true } } }
+          });
+          appsParaMostrar = userWithApps.user_apps.map(ua => ua.app);
+        }
       }
 
       return reply.view('hub.ejs', { 

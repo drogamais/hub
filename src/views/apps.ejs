@@ -140,6 +140,24 @@
           </label>
         </div>
 
+        <hr class="my-6 border-slate-100" />
+
+        <div class="space-y-4">
+          <h4 class="text-lg font-semibold text-ink">Acessos e Permissões</h4>
+
+          <div id="groupsPermissions" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <p class="text-sm text-slate-500 mb-3">Permissões por Grupo</p>
+            <!-- JS will populate a list of groups with selects -->
+            <div id="groupsList" class="space-y-3"></div>
+          </div>
+
+          <div id="usersExceptions" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <p class="text-sm text-slate-500 mb-3">Exceções por Utilizador</p>
+            <!-- JS will populate a list of users with selects -->
+            <div id="usersList" class="space-y-3 max-h-56 overflow-y-auto"></div>
+          </div>
+        </div>
+
         <p id="formError" class="hidden rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700"></p>
 
         <div class="flex justify-end gap-3 mt-4 border-t border-slate-100 pt-6">

@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { generateAccessToken, generateRefreshTokenString } = require('../lib/token');
+const { resolveAppPermissionsForUser } = require('../lib/permissions');
 
 function sanitizeUser(user) {
   if (!user) return null;
@@ -17,7 +18,7 @@ const authController = {
     const uname = username.trim().toLowerCase();
     const user = await prisma.user.findFirst({
       where: { username: uname },
-      include: { user_apps: { include: { app: true } } }
+      include: { user_apps: { include: { app: true } }, group: true }
     });
 
     if (!user || !user.is_active) return reply.code(401).send({ detail: 'Credenciais inválidas ou utilizador inativo.' });
@@ -25,12 +26,13 @@ const authController = {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) return reply.code(401).send({ detail: 'Credenciais inválidas.' });
 
-    const appIds = user.user_apps ? user.user_apps.map(ua => ua.app.id) : [];
-    
-    // 1. Gera o Access Token (com o setor)
+    // Resolve app permissions map for this user
+    const appPermissions = await resolveAppPermissionsForUser(user.id);
+
+    // 1. Gera o Access Token (com o setor + appPermissions)
     const access = generateAccessToken({ 
       userId: user.id, role: user.role, first_name: user.first_name, 
-      last_name: user.last_name, setor: user.setor, appIds 
+      last_name: user.last_name, setor: user.setor, appPermissions 
     });
 
     // 2. Geração do Refresh Token de 1 DIA
@@ -89,8 +91,8 @@ const authController = {
     const user = await prisma.user.findUnique({ where: { id: stored.id_usuario } });
     if (!user) return reply.code(401).send({ detail: 'user not found' });
 
-    const appIds = [];
-    const access = generateAccessToken({ userId: user.id, role: user.role, first_name: user.first_name, last_name: user.last_name, setor: user.setor, appIds });
+    const appPermissions = await resolveAppPermissionsForUser(user.id);
+    const access = generateAccessToken({ userId: user.id, role: user.role, first_name: user.first_name, last_name: user.last_name, setor: user.setor, appPermissions });
 
     // Return only access token (SID will set its own cookie)
     return reply.send({ access });
