@@ -33,17 +33,27 @@ const authController = {
       last_name: user.last_name, setor: user.setor, appIds 
     });
 
-    // 2. Gera e salva o Refresh Token no Banco (Recuperado!)
+    // 2. Geração do Refresh Token de 1 DIA
     const refreshString = generateRefreshTokenString();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
+    const expiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 dia em milissegundos
+    
+    // Atenção: Aqui não usamos 'stored' porque é um login novo
     await prisma.refreshToken.create({ 
       data: { token: refreshString, id_usuario: user.id, expires_at: expiresAt } 
     });
 
     // 3. Define os Cookies (para o SSR do Hub)
-    reply.setCookie('sso_access_token', access, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 15 * 60 });
-    // Guardamos o refresh em cookie para usar no endpoint de logout
-    reply.setCookie('sso_refresh_token', refreshString, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 });
+    reply.setCookie('sso_access_token', access, { 
+      path: '/', httpOnly: true, sameSite: 'lax', maxAge: 15 * 60 
+    });
+    
+    // Guardamos o refresh em cookie para usar no endpoint de logout (MaxAge 1 dia)
+    reply.setCookie('sso_refresh_token', refreshString, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 1 * 24 * 60 * 60, // 1 dia em segundos
+    });
 
     // 4. Retorna AMBOS os tokens para o frontend poder redirecionar (SSO)
     return reply.send({ access, refresh: refreshString, user: sanitizeUser(user) });
