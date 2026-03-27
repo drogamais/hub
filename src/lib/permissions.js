@@ -9,13 +9,17 @@ function maxPerm(a, b) {
 }
 
 async function resolveAppPermissionsForUser(userId) {
-  // Load user with group
+  // Load user
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return {};
 
-  // Super Admin rule: role admin and setor in TI or INTELIGÊNCIA DE MERCADO
-  const setor = (user.setor || '').toString().toUpperCase();
-  const isSuperAdmin = user.role === 'admin' && (setor === 'TI' || setor === 'INTELIGÊNCIA DE MERCADO');
+  const PROTECTED_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'ti@drogamais.com.br,inteligencia@drogamais.com.br')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+
+    // Load user to detect SuperAdmin by email
+    const isSuperAdmin = PROTECTED_EMAILS.includes((user.email || '').toLowerCase());
 
   // Load all apps
   const apps = await prisma.app.findMany({ select: { id: true, nome: true } });
@@ -25,30 +29,27 @@ async function resolveAppPermissionsForUser(userId) {
     return result;
   }
 
-  // Load group mappings for this user's group
-  const groupId = user.groupId || null;
-  const groupMap = {};
-  if (groupId) {
-    const gaps = await prisma.groupApp.findMany({ where: { id_grupo: groupId } });
-    gaps.forEach(g => { groupMap[g.id_aplicacao] = g.permissao || 'normal'; });
-  }
-
-  // Load user exceptions
+  // Load user-specific permissions (rel_usuario_aplicacao)
   const uapps = await prisma.userApp.findMany({ where: { id_usuario: userId } });
   const userMap = {};
   uapps.forEach(u => { userMap[u.id_aplicacao] = u.permissao || 'normal'; });
 
   apps.forEach(a => {
-    const g = groupMap[a.id] || 'none';
     const u = userMap[a.id];
-    let final;
-    if (typeof u !== 'undefined') final = maxPerm(g, u);
-    else final = g;
-    // Normalize 'none' to 'none', keep values
-    result[a.nome] = final || 'none';
+    result[a.nome] = (typeof u !== 'undefined') ? u : 'none';
   });
 
   return result;
 }
 
-module.exports = { resolveAppPermissionsForUser, maxPerm };
+async function isSuperAdmin(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (!user) return false;
+  const PROTECTED_EMAILS = (process.env.SUPER_ADMIN_EMAILS || 'ti@drogamais.com.br,inteligencia@drogamais.com.br')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  return PROTECTED_EMAILS.includes((user.email || '').toLowerCase());
+}
+
+module.exports = { resolveAppPermissionsForUser, maxPerm, isSuperAdmin };

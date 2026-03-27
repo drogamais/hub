@@ -1,12 +1,20 @@
 <% apps.forEach(a => { %>
-  <tr id="app-row-<%= a.id %>" class="border-t border-slate-100 text-sm text-slate-700 hover:bg-slate-50">
+  <tr id="app-row-<%= a.id %>" class="border-t border-slate-100 text-sm text-slate-700 hover:bg-slate-50 text-center">
     <td class="px-5 py-4 font-semibold text-ink"><%= a.nome %></td>
     <td class="px-5 py-4"><a href="<%= a.url %>" target="_blank" class="text-sid-600 hover:underline"><%= a.url %></a></td>
-    <td class="px-5 py-4"><%= a.descricao || '--' %></td>
+    <td class="px-5 py-4">
+      <span id="status-dot-<%= a.id %>" data-url="<%= a.url %>" class="inline-flex items-center gap-1">
+        <span class="text-xs" aria-hidden="true">🔵</span>
+        <span class="text-xs text-slate-500">Verificando...</span>
+      </span>
+    </td>
     <td class="px-5 py-4"><%= a.ativo ? 'Sim' : 'Não' %></td>
     <td class="px-5 py-4">
-      <% if (user && user.role === 'admin') { %>
-      <div class="flex gap-2">
+      <% if (superAdmin) { %>
+      <div class="flex gap-2 justify-center">
+        <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-sid-600 hover:bg-sid-50" onclick="openAppPermissionsModal('<%= a.id %>')">
+          Permissões
+        </button>
         <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" onclick="openEditModal('<%= a.id %>')">
           Editar
         </button>
@@ -16,6 +24,13 @@
         </button>
       </div>
       <% } %>
+    </td>
+    <td class="px-5 py-4">
+      <div class="flex justify-center">
+        <button onclick="openInfo('<%= a.id %>')" title="Informações" class="rounded-full border border-slate-200 w-8 h-8 flex items-center justify-center text-xs text-slate-500 hover:bg-slate-50">
+          ℹ️
+        </button>
+      </div>
     </td>
   </tr>
 <% }) %>

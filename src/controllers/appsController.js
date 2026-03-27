@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 
+const { isSuperAdmin } = require('../lib/permissions');
 const sanitizeApp = (a) => a ? a : null;
 
 const appsController = {
@@ -21,13 +22,11 @@ const appsController = {
       const id = parseInt(request.params.id, 10);
       const app = await prisma.app.findUnique({
         where: { id },
-        include: { user_apps: true, group_apps: true }
+        include: { user_apps: true }
       });
       if (!app) return reply.code(404).send({ detail: 'Aplicação não encontrada.' });
-
-      const grupos = (app.group_apps || []).map(g => ({ id_grupo: g.id_grupo, permissao: g.permissao }));
       const usuarios = (app.user_apps || []).map(u => ({ id_usuario: u.id_usuario, permissao: u.permissao }));
-      const payload = { ...sanitizeApp(app), grupos, usuarios };
+      const payload = { ...sanitizeApp(app), usuarios };
       return reply.send(payload);
     } catch (err) {
       request.log.error(err);
@@ -35,21 +34,41 @@ const appsController = {
     }
   },
 
+  async status(request, reply) {
+    try {
+      const id = parseInt(request.params.id, 10);
+      const app = await prisma.app.findUnique({ where: { id } });
+      if (!app) return reply.code(404).send({ detail: 'Aplicação não encontrada.' });
+
+      // Try to fetch the app URL with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      let online = false;
+      try {
+        const res = await fetch(app.url, { method: 'GET', signal: controller.signal });
+        online = res && res.ok;
+      } catch (e) {
+        online = false;
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      return reply.send({ online });
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ detail: 'Erro ao verificar status da aplicação.' });
+    }
+  },
+
   async create(request, reply) {
     try {
-      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
-      const { nome, descricao, url, ativo, icone, grupos, usuarios } = request.body || {};
+      if (!request.userId || !(await isSuperAdmin(request.userId))) return reply.code(403).send({ detail: 'Ação não autorizada.' });
+      const { nome, descricao, url, ativo, icone, usuarios } = request.body || {};
       if (!nome) return reply.code(400).send({ detail: 'Nome é obrigatório.' });
 
       const app = await prisma.app.create({
         data: { nome, descricao: descricao || null, url: url || null, icone: icone || null, ativo: typeof ativo === 'undefined' ? true : !!ativo }
       });
-
-      // Persist group mappings
-      if (Array.isArray(grupos)) {
-        const toCreate = grupos.filter(g => g.permissao && g.permissao !== 'none').map(g => ({ id_grupo: g.id_grupo, id_aplicacao: app.id, permissao: g.permissao }));
-        if (toCreate.length > 0) await prisma.groupApp.createMany({ data: toCreate });
-      }
 
       // Persist user exceptions
       if (Array.isArray(usuarios)) {
@@ -78,7 +97,7 @@ const appsController = {
 
   async update(request, reply) {
     try {
-      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
+      if (!request.userId || !(await isSuperAdmin(request.userId))) return reply.code(403).send({ detail: 'Ação não autorizada.' });
       const id = parseInt(request.params.id, 10);
       const { nome, descricao, url, ativo, icone, grupos, usuarios } = request.body || {};
       const existing = await prisma.app.findUnique({ where: { id } });
@@ -94,13 +113,6 @@ const appsController = {
           ativo: typeof ativo === 'undefined' ? existing.ativo : !!ativo,
         }
       });
-
-      // Update group mappings
-      if (Array.isArray(grupos)) {
-        await prisma.groupApp.deleteMany({ where: { id_aplicacao: id } });
-        const toCreate = grupos.filter(g => g.permissao && g.permissao !== 'none').map(g => ({ id_grupo: g.id_grupo, id_aplicacao: id, permissao: g.permissao }));
-        if (toCreate.length > 0) await prisma.groupApp.createMany({ data: toCreate });
-      }
 
       // Update user exceptions
       if (Array.isArray(usuarios)) {
@@ -128,12 +140,19 @@ const appsController = {
 
   async delete(request, reply) {
     try {
-      if (!request.user || request.user.role !== 'admin') return reply.code(403).send({ detail: 'Ação não autorizada.' });
+    if (!request.userId || !(await isSuperAdmin(request.userId))) return reply.code(403).send({ detail: 'Ação não autorizada.' });
       const id = parseInt(request.params.id, 10);
       const existing = await prisma.app.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ detail: 'Aplicação não encontrada.' });
 
-      await prisma.app.delete({ where: { id } });
+      // Remove dependent records first to avoid foreign key constraint errors
+      await prisma.$transaction([
+        prisma.userApp.deleteMany({ where: { id_aplicacao: id } }),
+        prisma.authorizationCode.deleteMany({ where: { id_aplicacao: id } }),
+        prisma.refreshToken.deleteMany({ where: { id_aplicacao: id } }),
+        prisma.app.delete({ where: { id } })
+      ]);
+
       if (request.headers['hx-request']) return '';
       return reply.code(204).send();
     } catch (err) {

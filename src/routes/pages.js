@@ -9,11 +9,13 @@ async function pagesRoutes(fastify) {
   fastify.register(async function(protected) {
     protected.addHook('preHandler', authenticate);
 
+    const { isSuperAdmin } = require('../lib/permissions');
     protected.get('/app/hub', async (request, reply) => {
       let appsParaMostrar = [];
+      const superAdmin = request.userId ? await isSuperAdmin(request.userId) : false;
 
-      if (request.user.role === 'admin') {
-        // Se for Admin, puxa TODOS os aplicativos ativos automaticamente
+      if (superAdmin) {
+        // Se for Super Admin, puxa TODOS os aplicativos ativos automaticamente
         appsParaMostrar = await prisma.app.findMany({ 
           where: { ativo: true },
           orderBy: { nome: 'asc' }
@@ -36,23 +38,26 @@ async function pagesRoutes(fastify) {
 
       return reply.view('hub.ejs', { 
         user: request.user, 
-        apps: appsParaMostrar 
+        apps: appsParaMostrar,
+        superAdmin
       });
     });
 
     protected.get('/app/users', async (request, reply) => {
-      // Apenas admins podem entrar aqui
-      if (request.user.role !== 'admin') return reply.redirect('/app/hub');
+      // Apenas Super Admins podem entrar aqui
+      const superAdmin = request.userId ? await isSuperAdmin(request.userId) : false;
+      if (!superAdmin) return reply.redirect('/app/hub');
       
       const users = await prisma.user.findMany();
-      return reply.view('users.ejs', { user: request.user, users });
+      return reply.view('users.ejs', { user: request.user, users, superAdmin });
     });
 
     // /app/apps — administração de aplicações (apenas admin)
     protected.get('/app/apps', async (request, reply) => {
-      if (request.user.role !== 'admin') return reply.redirect('/app/hub');
+      const superAdmin = request.userId ? await isSuperAdmin(request.userId) : false;
+      if (!superAdmin) return reply.redirect('/app/hub');
       const apps = await prisma.app.findMany({ orderBy: { nome: 'asc' } });
-      return reply.view('apps.ejs', { user: request.user, apps });
+      return reply.view('apps.ejs', { user: request.user, apps, superAdmin });
     });
   });
 

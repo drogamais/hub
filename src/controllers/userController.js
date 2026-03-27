@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
+const { isSuperAdmin } = require('../lib/permissions');
 
 const PAGE_SIZE = 20;
 const PROTECTED_EMAILS = ['ti@drogamais.com.br', 'inteligencia@drogamais.com.br']; // Protege a seed
@@ -12,9 +13,6 @@ const sanitizeUser = (user) => {
     u.aplicacoes = u.user_apps.map(ua => ua.app).filter(Boolean);
     delete u.user_apps;
   }
-  // preserve group info if present
-  if (user.groupId) u.groupId = user.groupId;
-  if (user.group) u.group = user.group;
   return u;
 };
 
@@ -53,7 +51,7 @@ const userController = {
     const id = parseInt(request.params.id, 10);
     const user = await prisma.user.findUnique({
       where: { id },
-      include: { user_apps: { include: { app: true } }, group: true }
+      include: { user_apps: { include: { app: true } } }
     });
     if (!user) return reply.code(404).send({ detail: 'Usuário não encontrado.' });
     return reply.send(sanitizeUser(user));
@@ -61,15 +59,18 @@ const userController = {
 
   // Cria um usuário novo e salva os cards (aplicacoes)
   async create(request, reply) {
-    const { email, password, first_name, last_name, role, setor, is_active, aplicacoes, groupId } = request.body;
+    // Only Super Admins can create users
+    if (!request.userId || !(await isSuperAdmin(request.userId))) {
+      return reply.code(403).send({ detail: 'Apenas Super Administradores podem criar usuários.' });
+    }
+    const { email, password, first_name, last_name, setor, is_active, aplicacoes } = request.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(), username: email.toLowerCase(),
-        password: hashedPassword, first_name, last_name, role, setor,
+        password: hashedPassword, first_name, last_name, setor,
         is_active: is_active ?? true,
-        groupId: groupId || null,
         // Salva as marcações de aplicativos
         user_apps: {
           create: (aplicacoes || []).map(appId => ({ id_aplicacao: appId }))
@@ -83,8 +84,12 @@ const userController = {
   // Edita o usuário e seus cards
   async update(request, reply) {
     const id = parseInt(request.params.id, 10);
-    const { email, password, first_name, last_name, role, setor, is_active, aplicacoes, groupId } = request.body;
+    const { email, password, first_name, last_name, setor, is_active, aplicacoes } = request.body;
     
+    // Only Super Admins can update users
+    if (!request.userId || !(await isSuperAdmin(request.userId))) {
+      return reply.code(403).send({ detail: 'Apenas Super Administradores podem editar usuários.' });
+    }
     const currentUser = await prisma.user.findUnique({ where: { id } });
     if (!currentUser) return reply.code(404).send({ detail: 'Usuário não encontrado.' });
 
@@ -93,7 +98,7 @@ const userController = {
       return reply.code(403).send({ detail: 'Os Super Administradores da matriz não podem ser alterados.' });
     }
 
-    const updateData = { first_name, last_name, role, setor, is_active, groupId: groupId ?? currentUser.groupId };
+    const updateData = { first_name, last_name, setor, is_active };
     if (email) { updateData.email = email.toLowerCase(); updateData.username = email.toLowerCase(); }
     if (password) { updateData.password = await bcrypt.hash(password, 10); }
 
@@ -122,6 +127,11 @@ const userController = {
 
     if (user && PROTECTED_EMAILS.includes(user.email)) {
       return reply.code(403).send({ detail: 'Os Super Administradores da matriz não podem ser apagados.' });
+    }
+
+    // Only Super Admins can delete users
+    if (!request.userId || !(await isSuperAdmin(request.userId))) {
+      return reply.code(403).send({ detail: 'Apenas Super Administradores podem apagar usuários.' });
     }
 
     await prisma.user.delete({ where: { id } });

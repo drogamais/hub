@@ -10,6 +10,7 @@ const getStoredUser = () => {
 
 function clearSession() {
     localStorage.clear();
+    try { clearSessionCookies(); } catch (e) {}
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
 }
 

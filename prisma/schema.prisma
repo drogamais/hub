@@ -7,11 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  admin
-  general
-}
-
 enum Permission {
   none
   normal
@@ -25,10 +20,7 @@ model User {
   password           String
   first_name         String               @default("")
   last_name          String               @default("")
-  role               UserRole             @default(general)
   setor              String?
-  groupId            Int?
-  group              Group?               @relation(fields: [groupId], references: [id])
   is_active          Boolean              @default(true)
 
   refresh_tokens     RefreshToken[]
@@ -42,7 +34,7 @@ model App {
   id            Int       @id @default(autoincrement())
   nome          String
   descricao     String?
-  url           String
+  url           String   @unique
   icone         String?   @default("web")
   client_id     String?   @unique
   client_secret String?
@@ -55,7 +47,7 @@ model App {
   refresh_tokens RefreshToken[]
   authorization_codes AuthorizationCode[]
   user_apps      UserApp[]
-  group_apps     GroupApp[]
+  
 
   @@map("dim_aplicacao")
 }
@@ -108,24 +100,4 @@ model AuthorizationCode {
   @@map("authorization_codes")
 }
 
-model Group {
-  id         Int        @id @default(autoincrement())
-  nome       String
-  users      User[]
-  group_apps GroupApp[]
-
-  @@map("dim_grupo")
-}
-
-model GroupApp {
-  id           Int        @id @default(autoincrement())
-  id_grupo     Int
-  id_aplicacao Int
-  permissao    Permission @default(normal)
-
-  group Group @relation(fields: [id_grupo], references: [id])
-  app   App   @relation(fields: [id_aplicacao], references: [id])
-
-  @@unique([id_grupo, id_aplicacao])
-  @@map("rel_grupo_aplicacao")
-}
+// Group and GroupApp removed — permissions are handled per-user via `rel_usuario_aplicacao` (UserApp)

@@ -13,7 +13,11 @@ services:
     restart: unless-stopped
     networks:
       - hub_net
+      - drogamais_net
 
 networks:
   hub_net:
+    driver: bridge
+  drogamais_net:
+    name: drogamais_net
     driver: bridge

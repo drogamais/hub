@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="/public/css/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
+
 <body class="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fafc,_#e2e8f0_100%)] font-sans">
 
   <div class="flex h-screen overflow-hidden">
@@ -18,36 +20,46 @@
       </div>
 
       <nav class="flex-1 space-y-1 px-3 py-4">
-        
-        <a href="/app/hub" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+
+        <a href="/app/hub"
+          class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
           <span>📊</span> Meu Hub
         </a>
 
-        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
-          <a href="/app/apps" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <% if (superAdmin) { %>
+          <a href="/app/apps"
+            class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
             <span>⚙️</span> Gerenciar Intranets
           </a>
-        <% } %>
+          <% } %>
 
-        <% if (user && user.role === 'admin' && ['TI', 'INTELIGÊNCIA DE MERCADO'].includes(user.setor)) { %>
-          <a href="/app/users" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-            <span>👥</span> Usuários
-          </a>
-        <% } %>
+            <% if (superAdmin) { %>
+              <a href="/app/users"
+                class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+                <span>👥</span> Usuários
+              </a>
+              <% } %>
 
       </nav>
 
       <div class="border-t border-slate-100 px-4 py-4">
         <div class="flex items-center gap-3">
-          <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-            <%= (user.first_name[0] || '') + (user.last_name[0] || '') %>
+          <div
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+            <%= (user.first_name[0] || '' ) + (user.last_name[0] || '' ) %>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="truncate text-sm font-semibold text-ink"><%= user.first_name %> <%= user.last_name %></p>
-            <p class="truncate text-xs text-slate-400"><%= user.email %></p>
+            <p class="truncate text-sm font-semibold text-ink">
+              <%= user.first_name %>
+                <%= user.last_name %>
+            </p>
+            <p class="truncate text-xs text-slate-400">
+              <%= user.email %>
+            </p>
           </div>
         </div>
-        <button onclick="showLogoutModal()" class="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600 hover:border-red-200">Sair</button>
+        <button onclick="showLogoutModal()"
+          class="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600 hover:border-red-200">Sair</button>
       </div>
     </aside>
 
@@ -55,29 +67,28 @@
       <div class="mx-auto max-w-7xl p-8 space-y-6">
 
         <section class="rounded-3xl bg-white p-6 shadow-panel">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Administração</p>
               <h2 class="text-3xl font-bold text-ink">Aplicativos</h2>
               <p class="mt-2 text-sm text-slate-500">Cadastro e manutenção de aplicativos do Hub.</p>
             </div>
-            <% if (user && user.role === 'admin') { %>
-            <button onclick="openModal()" class="rounded-2xl bg-sid-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sid-700">Novo app</button>
-            <% } %>
+            <% if (superAdmin) { %>
+              <button onclick="openModal()"
+                class="rounded-2xl bg-sid-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sid-700">Novo
+                app</button>
+              <% } %>
           </div>
         </section>
 
         <section class="rounded-3xl bg-white p-6 shadow-panel">
           <div class="relative">
-            <input type="text" name="search" 
-                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-sid-500 focus:bg-white" 
-                   placeholder="Buscar por nome, url ou descrição..."
-                   hx-get="/api/apps" 
-                   hx-trigger="keyup changed delay:500ms" 
-                   hx-target="#appsTableBody"
-                   hx-indicator="#spinner">
+            <input type="text" name="search"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-sid-500 focus:bg-white"
+              placeholder="Buscar por nome, url ou descrição..." hx-get="/api/apps"
+              hx-trigger="keyup changed delay:500ms" hx-target="#appsTableBody" hx-indicator="#spinner">
             <div id="spinner" class="htmx-indicator absolute right-4 top-3">
-               <div class="animate-spin h-5 w-5 border-2 border-sid-500 border-t-transparent rounded-full"></div>
+              <div class="animate-spin h-5 w-5 border-2 border-sid-500 border-t-transparent rounded-full"></div>
             </div>
           </div>
         </section>
@@ -85,17 +96,18 @@
         <section class="overflow-hidden rounded-3xl bg-white shadow-panel">
           <div class="overflow-x-auto">
             <table class="min-w-full border-collapse">
-              <thead class="bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+              <thead class="bg-slate-50 text-center text-xs uppercase tracking-[0.18em] text-slate-500">
                 <tr>
                   <th class="px-5 py-4">Nome</th>
                   <th class="px-5 py-4">URL</th>
-                  <th class="px-5 py-4">Descrição</th>
+                  <th class="px-5 py-4">Status</th>
                   <th class="px-5 py-4">Ativo</th>
                   <th class="px-5 py-4">Ações</th>
+                  <th class="px-5 py-4">Info</th>
                 </tr>
               </thead>
               <tbody id="appsTableBody">
-                <%- include('partials/app-table-rows', { apps: apps, user: user }) %>
+                <%- include('partials/app-table-rows', { apps: apps, user: user, superAdmin: superAdmin }) %>
               </tbody>
             </table>
           </div>
@@ -104,9 +116,10 @@
     </main>
   </div>
 
-  <div id="formModal" class="fixed inset-0 z-[100] hidden items-start justify-center bg-slate-950/40 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+  <div id="formModal"
+    class="fixed inset-0 z-[100] hidden items-start justify-center bg-slate-950/40 backdrop-blur-sm px-4 py-8 overflow-y-auto">
     <div class="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl my-auto">
-      
+
       <div class="mb-6 flex items-start justify-between gap-4">
         <div>
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Administração</p>
@@ -116,23 +129,29 @@
 
       <form id="appForm" class="space-y-6">
         <input type="hidden" id="editingId" value="" />
-        
+
         <div class="grid gap-4 md:grid-cols-2">
           <label class="text-sm text-slate-600 md:col-span-2">
             <span class="mb-2 block font-medium">Nome</span>
-            <input id="f_nome" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white" required />
+            <input id="f_nome"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"
+              required />
           </label>
           <label class="text-sm text-slate-600 md:col-span-2">
             <span class="mb-2 block font-medium">URL</span>
-            <input id="f_url" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white" type="url" required />
+            <input id="f_url"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"
+              type="url" required />
           </label>
           <label class="text-sm text-slate-600 md:col-span-2">
             <span class="mb-2 block font-medium">Descrição</span>
-            <textarea id="f_descricao" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"></textarea>
+            <textarea id="f_descricao"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-sid-500 focus:bg-white"></textarea>
           </label>
           <label class="text-sm text-slate-600">
             <span class="mb-2 block font-medium">Ícone (classe ou URL)</span>
-            <input id="f_icone" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sid-500 focus:bg-white" />
+            <input id="f_icone"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sid-500 focus:bg-white" />
           </label>
           <label class="text-sm text-slate-600 flex items-center gap-3 md:col-span-2">
             <input id="f_ativo" type="checkbox" checked class="accent-sid-600 w-4 h-4 rounded" />
@@ -140,29 +159,16 @@
           </label>
         </div>
 
-        <hr class="my-6 border-slate-100" />
-
-        <div class="space-y-4">
-          <h4 class="text-lg font-semibold text-ink">Acessos e Permissões</h4>
-
-          <div id="groupsPermissions" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-            <p class="text-sm text-slate-500 mb-3">Permissões por Grupo</p>
-            <!-- JS will populate a list of groups with selects -->
-            <div id="groupsList" class="space-y-3"></div>
-          </div>
-
-          <div id="usersExceptions" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-            <p class="text-sm text-slate-500 mb-3">Exceções por Utilizador</p>
-            <!-- JS will populate a list of users with selects -->
-            <div id="usersList" class="space-y-3 max-h-56 overflow-y-auto"></div>
-          </div>
-        </div>
+        <!-- O painel de acessos e permissões foi transferido para um modal dedicado -->
 
         <p id="formError" class="hidden rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700"></p>
 
         <div class="flex justify-end gap-3 mt-4 border-t border-slate-100 pt-6">
-          <button onclick="closeModal()" type="button" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button id="modalSubmitBtn" type="submit" class="rounded-2xl bg-sid-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sid-700">Salvar App</button>
+          <button onclick="closeModal()" type="button"
+            class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
+          <button id="modalSubmitBtn" type="submit"
+            class="rounded-2xl bg-sid-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sid-700">Salvar
+            App</button>
         </div>
       </form>
     </div>
@@ -170,8 +176,63 @@
 
   <%- include('partials/modal-logout') %>
 
-  <script src="/public/js/auth-shared.js"></script>
-  <script src="/public/js/auth.js"></script>
-  <script src="/public/js/apps-ui.js"></script>
+    <!-- App info modal -->
+    <div id="appInfoModal"
+      class="fixed inset-0 z-[120] hidden items-start justify-center bg-slate-950/40 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+      <div class="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl my-auto">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 id="appInfoTitle" class="text-xl font-bold text-ink">Informações</h3>
+          <button onclick="closeInfoModal()" class="text-sm text-slate-500">Fechar</button>
+        </div>
+        <div id="appInfoBody" class="text-sm text-slate-700"></div>
+      </div>
+    </div>
+
+    <!-- Permissions modal -->
+    <div id="permissionsModal"
+      class="fixed inset-0 z-[110] hidden items-start justify-center bg-slate-950/40 backdrop-blur-sm px-4 py-8 overflow-y-auto">
+      <div class="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl my-auto">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-xl font-bold text-ink">Permissões da Aplicação</h3>
+        </div>
+
+        <div class="mb-4 flex flex-col sm:flex-row gap-3">
+          <input id="permSearch" type="text" placeholder="Buscar por e-mail ou nome..."
+            class="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sid-500 focus:bg-white transition" />
+          <select id="permSetor"
+            class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-sid-500 focus:bg-white transition sm:w-56">
+            <option value="">Todos os Setores</option>
+            <option value="ADMINISTRATIVO">Administrativo</option>
+            <option value="INTELIGÊNCIA DE MERCADO">Inteligência de Mercado</option>
+            <option value="TI">TI</option>
+            <option value="COMERCIAL - APF">Comercial - APF</option>
+            <option value="COMERCIAL - CD">Comercial - CD</option>
+            <option value="FINANCEIRO">Financeiro</option>
+            <option value="MARKETING">Marketing</option>
+          </select>
+        </div>
+
+        <form id="permissionsForm">
+          <input type="hidden" id="permAppId" value="" />
+          <div id="permUsersList"
+            class="space-y-2 max-h-96 overflow-y-auto border border-slate-100 rounded-xl p-3 bg-slate-50"></div>
+
+          <p id="permFormError" class="hidden mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700"></p>
+
+          <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+            <button onclick="closePermissionsModal()" type="button"
+              class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Cancelar</button>
+            <button id="permSubmitBtn" type="submit"
+              class="rounded-2xl bg-sid-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sid-700 transition">Salvar
+              Permissões</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/public/js/auth-shared.js"></script>
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/apps-ui.js"></script>
 </body>
+
 </html>

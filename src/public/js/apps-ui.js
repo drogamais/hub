@@ -1,5 +1,4 @@
 let appsCache = [];
-let groupsCache = [];
 let usersCache = [];
 
 async function loadApps() {
@@ -12,15 +11,165 @@ async function loadApps() {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadApps();
   await loadGroupsAndUsers();
+  startStatusPolling();
 });
+
+// Status polling
+function updateStatusDot(id, online) {
+  const el = document.getElementById(`status-dot-${id}`);
+  if (!el) return;
+  const dot = el.querySelector('span');
+  const text = el.querySelector('span + span') || el.querySelector('span');
+  if (online) {
+    if (dot) { dot.className = 'text-xs'; dot.textContent = '🟢'; }
+    if (text) text.textContent = 'Online';
+  } else {
+    if (dot) { dot.className = 'text-xs'; dot.textContent = '🔴'; }
+    if (text) text.textContent = 'Offline';
+  }
+}
+
+async function checkAppStatus(id) {
+  const container = document.getElementById(`status-dot-${id}`);
+  if (!container) return;
+  const url = container.dataset.url;
+  if (!url) return;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    await fetch(url, { method: 'GET', mode: 'no-cors', signal: controller.signal });
+    clearTimeout(timeout);
+    updateStatusDot(id, true);
+  } catch (e) {
+    updateStatusDot(id, false);
+  }
+}
+
+function startStatusPolling() {
+  // initial check
+  appsCache.forEach(a => { if (a && a.id) checkAppStatus(a.id); });
+  // poll every 30s
+  setInterval(() => {
+    appsCache.forEach(a => { if (a && a.id) checkAppStatus(a.id); });
+  }, 30 * 1000);
+}
+
+// Info modal
+async function openInfo(id) {
+  try {
+    const res = await fetch(`/api/apps/${id}/`);
+    if (!res.ok) throw new Error('Falha ao carregar app');
+    const a = await res.json();
+    document.getElementById('appInfoTitle').textContent = a.nome || 'Informações';
+    document.getElementById('appInfoBody').innerHTML = `<p class="mb-2 text-sm text-slate-600">URL: <a href="${a.url}" target="_blank" class="text-sid-600 hover:underline">${a.url}</a></p><p class="text-sm text-slate-700">${a.descricao || '—'}</p>`;
+    const el = document.getElementById('appInfoModal'); if (!el) return; el.classList.remove('hidden'); el.classList.add('flex');
+  } catch (e) { alert(e.message); }
+}
+
+function closeInfoModal() { const el = document.getElementById('appInfoModal'); if (!el) return; el.classList.add('hidden'); el.classList.remove('flex'); }
 
 async function loadGroupsAndUsers() {
   try {
-    const [gRes, uRes] = await Promise.all([fetch('/api/apps/groups'), fetch('/api/apps/users-active')]);
-    if (gRes.ok) groupsCache = await gRes.json();
+    const uRes = await fetch('/api/apps/users-active');
     if (uRes.ok) usersCache = await uRes.json();
   } catch (e) { console.error('Erro ao buscar grupos/usuarios', e); }
 }
+
+// App permissions modal
+window.openAppPermissionsModal = async function (id) {
+  try {
+    const res = await fetch(`/api/apps/${id}/`);
+    if (!res.ok) throw new Error('Falha ao carregar aplicação.');
+    const a = await res.json();
+
+    document.getElementById('permAppId').value = a.id;
+    const uMap = {};
+    (a.usuarios || []).forEach(u => { uMap[u.id_usuario] = u.permissao; });
+
+    const container = document.getElementById('permUsersList');
+    container.innerHTML = '';
+
+    usersCache.forEach(u => {
+      const email = (u.email || '').toLowerCase();
+      if (['ti@drogamais.com.br', 'inteligencia@drogamais.com.br'].includes(email)) return;
+
+      const row = createUserRow(u, uMap[u.id]);
+      row.dataset.search = `${email} ${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
+      row.dataset.setor = u.setor || '';
+      container.appendChild(row);
+    });
+
+    document.getElementById('permSearch').value = '';
+    const setorEl = document.getElementById('permSetor');
+    if (setorEl) setorEl.value = '';
+
+    const el = document.getElementById('permissionsModal');
+    el.classList.remove('hidden');
+    el.classList.add('flex');
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+window.closePermissionsModal = function () {
+  const el = document.getElementById('permissionsModal');
+  if (!el) return;
+  el.classList.add('hidden');
+  el.classList.remove('flex');
+};
+
+function applyPermFilters() {
+  const q = (document.getElementById('permSearch')?.value || '').toLowerCase();
+  const setor = document.getElementById('permSetor')?.value || '';
+
+  const rows = document.querySelectorAll('#permUsersList > div');
+  rows.forEach(row => {
+    const matchesQuery = !q || row.dataset.search.includes(q);
+    const matchesSetor = !setor || row.dataset.setor === setor;
+
+    if (matchesQuery && matchesSetor) {
+      row.style.display = 'flex';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+document.getElementById('permSearch')?.addEventListener('input', applyPermFilters);
+document.getElementById('permSetor')?.addEventListener('change', applyPermFilters);
+
+document.getElementById('permissionsForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('permFormError');
+  const submitBtn = document.getElementById('permSubmitBtn');
+  errorEl.classList.add('hidden');
+  submitBtn.disabled = true;
+
+  const appId = document.getElementById('permAppId').value;
+  const selects = Array.from(document.querySelectorAll('#permUsersList select'));
+
+  const usuariosOpts = selects
+    .map(s => ({ id_usuario: parseInt(s.dataset.userId, 10), permissao: s.value }));
+
+  try {
+    const res = await fetch(`/api/apps/${appId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuarios: usuariosOpts })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.detail || 'Erro ao salvar permissões.');
+
+    window.closePermissionsModal();
+    window.location.reload();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
 
 function openModal() {
   document.getElementById('formModal').classList.remove('hidden');
@@ -29,7 +178,6 @@ function openModal() {
   document.getElementById('appForm').reset();
   document.getElementById('editingId').value = '';
   document.getElementById('formError').classList.add('hidden');
-  populatePermissionControls();
 }
 
 function closeModal() {
@@ -40,7 +188,7 @@ function closeModal() {
   document.getElementById('formError').classList.add('hidden');
 }
 
-window.openEditModal = async function(id) {
+window.openEditModal = async function (id) {
   try {
     const res = await fetch(`/api/apps/${id}/`);
     if (!res.ok) throw new Error('Falha ao carregar aplicação.');
@@ -54,83 +202,34 @@ window.openEditModal = async function(id) {
     document.getElementById('f_icone').value = a.icone || '';
     document.getElementById('f_ativo').checked = !!a.ativo;
     openModal();
-    populatePermissionControls(a.grupos || [], a.usuarios || []);
   } catch (err) {
     alert(err.message);
   }
 };
 
-function createGroupRow(g, selected) {
+// groups removed — permissions are per-user only
+
+function createUserRow(u, selected) {
   const container = document.createElement('div');
-  container.className = 'flex items-center gap-3';
+  container.className = 'flex items-center justify-between gap-3 bg-white p-3 border-b border-slate-100';
   const label = document.createElement('div');
   label.className = 'flex-1 text-sm text-slate-700';
-  label.textContent = g.nome;
+  label.textContent = `${u.first_name} ${u.last_name} - ${u.email} ${u.setor ? `(${u.setor})` : ''}`;
 
   const select = document.createElement('select');
-  select.className = 'rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm';
-  select.dataset.groupId = g.id;
-  ['none','normal','admin'].forEach(v => {
-    const opt = document.createElement('option'); opt.value = v; opt.text = v === 'none' ? 'Sem Acesso' : (v === 'normal' ? 'Normal' : 'Admin');
+  select.className = 'rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-sid-500 focus:bg-white transition';
+  select.dataset.userId = u.id;
+  ['none', 'normal', 'admin'].forEach(v => {
+    const opt = document.createElement('option'); opt.value = v;
+    if (v === 'none') opt.text = 'Sem Acesso (None)';
+    if (v === 'normal') opt.text = 'Normal';
+    if (v === 'admin') opt.text = 'Admin';
     if (v === (selected || 'none')) opt.selected = true;
     select.appendChild(opt);
   });
   container.appendChild(label);
   container.appendChild(select);
   return container;
-}
-
-function createUserRow(u, selected) {
-  const container = document.createElement('div');
-  container.className = 'flex items-center gap-3';
-  const label = document.createElement('div');
-  label.className = 'flex-1 text-sm text-slate-700';
-  label.textContent = `${u.first_name} ${u.last_name} (${u.email})`;
-
-  const select = document.createElement('select');
-  select.className = 'rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm';
-  select.dataset.userId = u.id;
-  ['inherit','none','normal','admin'].forEach(v => {
-    const opt = document.createElement('option'); opt.value = v;
-    if (v === 'inherit') opt.text = 'Herdar do Grupo';
-    if (v === 'none') opt.text = 'Sem Acesso';
-    if (v === 'normal') opt.text = 'Normal';
-    if (v === 'admin') opt.text = 'Admin';
-    if (v === (selected || 'inherit')) opt.selected = true;
-    select.appendChild(opt);
-  });
-  container.appendChild(label);
-  container.appendChild(select);
-  return container;
-}
-
-function populatePermissionControls(grupos = [], usuarios = []) {
-  const groupsListEl = document.getElementById('groupsList');
-  const usersListEl = document.getElementById('usersList');
-  if (!groupsListEl || !usersListEl) return;
-  groupsListEl.innerHTML = '';
-  usersListEl.innerHTML = '';
-
-  // Map selections by id
-  const gMap = {};
-  (grupos || []).forEach(g => { gMap[g.id_grupo] = g.permissao; });
-  const uMap = {};
-  (usuarios || []).forEach(u => { uMap[u.id_usuario] = u.permissao; });
-
-  // Groups
-  groupsCache.forEach(g => {
-    const row = createGroupRow(g, gMap[g.id]);
-    groupsListEl.appendChild(row);
-  });
-
-  // Users (exclude super-admins)
-  usersCache.forEach(u => {
-    const setor = (u.setor || '').toString().toUpperCase();
-    const isSuperAdmin = u.role === 'admin' && (setor === 'TI' || setor === 'INTELIGÊNCIA DE MERCADO');
-    if (isSuperAdmin) return; // skip
-    const row = createUserRow(u, uMap[u.id]);
-    usersListEl.appendChild(row);
-  });
 }
 
 async function deleteApp(id) {
@@ -164,16 +263,7 @@ document.getElementById('appForm')?.addEventListener('submit', async (e) => {
     ativo: document.getElementById('f_ativo').checked,
   };
 
-  // Collect grupos and usuarios selections
-  const gruposEls = Array.from(document.querySelectorAll('#groupsList select'));
-  if (gruposEls.length > 0) {
-    payload.grupos = gruposEls.map(s => ({ id_grupo: parseInt(s.dataset.groupId, 10), permissao: s.value }));
-  }
-  const usuariosEls = Array.from(document.querySelectorAll('#usersList select'));
-  if (usuariosEls.length > 0) {
-    payload.usuarios = usuariosEls.map(s => ({ id_usuario: parseInt(s.dataset.userId, 10), permissao: s.value }));
-  }
-
+  // Usuarios são gerenciados por modal separado  
   try {
     const url = editingId ? `/api/apps/${editingId}/` : '/api/apps/';
     const method = editingId ? 'PATCH' : 'POST';
