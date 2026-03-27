@@ -3,7 +3,7 @@ const prisma = require('../lib/prisma');
 const { isSuperAdmin } = require('../lib/permissions');
 
 const PAGE_SIZE = 20;
-const PROTECTED_EMAILS = ['ti@drogamais.com.br', 'inteligencia@drogamais.com.br']; // Protege a seed
+const PROTECTED_EMAILS = ['inteligencia@drogamais.com.br']; // Protege a seed
 
 const sanitizeUser = (user) => {
   if (!user) return null;

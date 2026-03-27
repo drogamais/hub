@@ -48,7 +48,7 @@ const authController = {
     });
 
     const refreshString = generateRefreshTokenString();
-    const expiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); 
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); 
     
     await prisma.refreshToken.create({ 
       data: { token: refreshString, id_usuario: user.id, expires_at: expiresAt } 
@@ -62,7 +62,7 @@ const authController = {
     
     reply.setCookie('sso_refresh_token', refreshString, {
       ...baseCookieOpts,
-      maxAge: 1 * 24 * 60 * 60,
+      maxAge: 12 * 60 * 60,
     });
 
     return reply.send({ access, refresh: refreshString, user: sanitizeUser(user) });

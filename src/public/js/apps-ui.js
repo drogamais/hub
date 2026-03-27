@@ -92,7 +92,7 @@ window.openAppPermissionsModal = async function (id) {
 
     usersCache.forEach(u => {
       const email = (u.email || '').toLowerCase();
-      if (['ti@drogamais.com.br', 'inteligencia@drogamais.com.br'].includes(email)) return;
+      if (['inteligencia@drogamais.com.br'].includes(email)) return;
 
       const row = createUserRow(u, uMap[u.id]);
       row.dataset.search = `${email} ${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
