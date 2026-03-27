@@ -98,8 +98,20 @@
   </div>
 
   <%- include('partials/modal-logout') %>
+  <%- include('partials/sync-session') %>
 
   <script src="/public/js/auth-shared.js"></script>
   <script src="/public/js/hub.js"></script>
+
+  <% if (typeof refreshedData !== 'undefined' && refreshedData) { %>
+    <script>
+      console.log('[Hub Sync] Session was silently refreshed by server. Updating localStorage...');
+      saveSession(
+        '<%= refreshedData.access %>', 
+        '<%= refreshedData.refresh %>', 
+        '<%- JSON.stringify(refreshedData.user) %>'
+      );
+    </script>
+  <% } %>
 </body>
 </html>

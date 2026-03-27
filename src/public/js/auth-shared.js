@@ -7,15 +7,8 @@ function saveSession(access, refresh, user) {
     localStorage.setItem(REFRESH_KEY, refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
 
-    // Also set cookies so server-side middleware (which checks cookie `sso_access_token`) accepts requests
-    try {
-        const opts = ['Path=/'];
-        // session cookie (no Expires) will be cleared when browser closes; set as basic cookie
-        document.cookie = `sso_access_token=${access}; ${opts.join('; ')}`;
-        document.cookie = `sso_refresh_token=${refresh}; ${opts.join('; ')}`;
-    } catch (e) {
-        console.warn('Could not set session cookies', e);
-    }
+    // Cookies are now handled exclusively by the server (httpOnly) for better security and consistency.
+    // However, we still clear them on logout below.
 }
 
 function getStoredUser() {

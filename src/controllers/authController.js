@@ -62,13 +62,18 @@ const authController = {
   },
 
   async logout(request, reply) {
-    // Tenta invalidar o refresh token no banco se estiver no cookie
-    const refreshToken = request.cookies.sso_refresh_token;
+    // Tenta invalidar o refresh token no banco. Aceita token via cookie ou JSON body { refresh }
+    const refreshToken = request.cookies.sso_refresh_token || (request.body && request.body.refresh);
     if (refreshToken) {
-      await prisma.refreshToken.updateMany({
-        where: { token: refreshToken },
-        data: { revoked: true }
-      });
+      try {
+        await prisma.refreshToken.updateMany({
+          where: { token: refreshToken },
+          data: { revoked: true }
+        });
+        console.log('[Hub Auth] Revoked refresh token for logout.');
+      } catch (e) {
+        console.warn('[Hub Auth] Failed to revoke refresh token:', e && e.message);
+      }
     }
 
     reply.clearCookie('sso_access_token', { path: '/' });
@@ -79,41 +84,33 @@ const authController = {
   async refresh(request, reply) {
     // Accept refresh token either from cookie or JSON body { refresh }
     const refreshToken = request.cookies.sso_refresh_token || (request.body && request.body.refresh);
-    if (!refreshToken) {
-      console.log('[Hub Auth] Refresh requested without token.');
-      return reply.code(400).send({ detail: 'refresh token required' });
-    }
-
-    const stored = await prisma.refreshToken.findFirst({ where: { token: refreshToken } });
     
-    if (!stored) {
-      console.warn('[Hub Auth] Refresh token not found in database.');
-      return reply.code(401).send({ detail: 'refresh invalid' });
-    }
+    const result = await require('../lib/authService').refreshSession(refreshToken);
     
-    if (stored.revoked) {
-      console.log('[Hub Auth] Refresh blocked: token has been revoked (Global Logout).');
-      return reply.code(401).send({ detail: 'refresh invalid' });
+    if (!result) {
+      console.log('[Hub Auth] Refresh blocked: token invalid, expired, or revoked.');
+      return reply.code(401).send({ detail: 'refresh invalid or expired' });
     }
 
-    if (stored.expires_at && new Date(stored.expires_at) < new Date()) {
-      console.log('[Hub Auth] Refresh blocked: token expired.');
-      return reply.code(401).send({ detail: 'refresh expired' });
+    console.log('[Hub Auth] Session renewed for user:', result.user.username);
+    
+    // If it came from cookie, we update the access cookie
+    if (request.cookies.sso_refresh_token) {
+      reply.setCookie('sso_access_token', result.access, { 
+        path: '/', httpOnly: true, sameSite: 'lax', maxAge: 1 * 60 
+      });
     }
 
-    // Load user to build access token payload
-    const user = await prisma.user.findUnique({ where: { id: stored.id_usuario } });
-    if (!user) {
-      console.error('[Hub Auth] User not found during refresh lookup.');
-      return reply.code(401).send({ detail: 'user not found' });
+    // If a caller requests the hub to set the cookie (internal/service call), support via header
+    // e.g. send 'x-set-sso-cookie: 1' to have the hub set the sso_access_token cookie.
+    if (!request.cookies.sso_refresh_token && request.headers && request.headers['x-set-sso-cookie'] === '1') {
+      reply.setCookie('sso_access_token', result.access, { 
+        path: '/', httpOnly: true, sameSite: 'lax', maxAge: 1 * 60 
+      });
     }
 
-    console.log('[Hub Auth] Session renewed for user:', user.username);
-    const appPermissions = await resolveAppPermissionsForUser(user.id);
-    const access = generateAccessToken({ userId: user.id, first_name: user.first_name, last_name: user.last_name, setor: user.setor, appPermissions });
-
-    // Return only access token (SID will set its own cookie)
-    return reply.send({ access });
+    // Return only access token (SID will set its own cookie if needed)
+    return reply.send({ access: result.access });
   }
 };
 

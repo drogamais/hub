@@ -1,0 +1,19 @@
+<% if (typeof refreshedData !== 'undefined' && refreshedData) { %>
+<script>
+    (function syncRefreshedSession() {
+        console.log('[Hub Sync] Session was silently refreshed by server. Updating localStorage...');
+        if (typeof saveSession === 'function') {
+            saveSession(
+                '<%= refreshedData.access %>', 
+                '<%= refreshedData.refresh %>', 
+                '<%- JSON.stringify(refreshedData.user) %>'
+            );
+        } else {
+            // Fallback if saveSession is not available yet
+            localStorage.setItem('sid_access_token', '<%= refreshedData.access %>');
+            localStorage.setItem('sid_refresh_token', '<%= refreshedData.refresh %>');
+            localStorage.setItem('sid_user', JSON.stringify('<%- JSON.stringify(refreshedData.user) %>'));
+        }
+    })();
+</script>
+<% } %>

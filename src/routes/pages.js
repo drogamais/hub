@@ -39,7 +39,8 @@ async function pagesRoutes(fastify) {
       return reply.view('hub.ejs', { 
         user: request.user, 
         apps: appsParaMostrar,
-        superAdmin
+        superAdmin,
+        refreshedData: request.refreshedData
       });
     });
 
@@ -49,7 +50,12 @@ async function pagesRoutes(fastify) {
       if (!superAdmin) return reply.redirect('/app/hub');
       
       const users = await prisma.user.findMany();
-      return reply.view('users.ejs', { user: request.user, users, superAdmin });
+      return reply.view('users.ejs', { 
+        user: request.user, 
+        users, 
+        superAdmin,
+        refreshedData: request.refreshedData 
+      });
     });
 
     // /app/apps — administração de aplicações (apenas admin)
@@ -57,7 +63,12 @@ async function pagesRoutes(fastify) {
       const superAdmin = request.userId ? await isSuperAdmin(request.userId) : false;
       if (!superAdmin) return reply.redirect('/app/hub');
       const apps = await prisma.app.findMany({ orderBy: { nome: 'asc' } });
-      return reply.view('apps.ejs', { user: request.user, apps, superAdmin });
+      return reply.view('apps.ejs', { 
+        user: request.user, 
+        apps, 
+        superAdmin,
+        refreshedData: request.refreshedData 
+      });
     });
   });
 
