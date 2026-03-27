@@ -16,8 +16,30 @@
   function showLogoutModal() { document.getElementById('logoutModal').classList.replace('hidden', 'flex'); }
   function closeLogoutModal() { document.getElementById('logoutModal').classList.replace('flex', 'hidden'); }
   async function confirmLogout() {
-      await fetch('/api/auth/logout/', { method: 'POST' });
+      // Desabilita o botão e mostra feedback visual
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      btn.textContent = 'Saindo...';
+
+      // Pega o refresh token do localStorage antes de limpar (backup para enviar no body)
+      const refreshToken = localStorage.getItem('sid_refresh_token');
+
+      try {
+          await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',  // ESSENCIAL: envia os cookies HttpOnly
+              body: JSON.stringify({ refresh: refreshToken })
+          });
+          console.log('[Logout] Servidor respondeu com sucesso.');
+      } catch (e) {
+          console.warn('[Logout] Erro ao chamar o servidor:', e);
+      }
+
+      // Limpa o localStorage somente DEPOIS da resposta do servidor
       localStorage.clear();
+
+      // Redireciona para o login
       window.location.href = '/login';
   }
 </script>

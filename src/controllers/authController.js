@@ -70,16 +70,22 @@ const authController = {
 
   async logout(request, reply) {
     try {
-      // Pega o token do cookie ou do body
-      const refreshToken = request.cookies.sso_refresh_token || (request.body && request.body.refresh);
+      // Pega o token do cookie (preferencial) ou do body (fallback)
+      const fromCookie = request.cookies.sso_refresh_token;
+      const fromBody = request.body && request.body.refresh;
+      const refreshToken = fromCookie || fromBody;
       
+      console.log('[Hub Auth] Logout chamado. Token via cookie:', !!fromCookie, '| Token via body:', !!fromBody);
+
       if (refreshToken) {
         // Usamos updateMany para evitar erro caso o token não exista mais no banco
-        await prisma.refreshToken.updateMany({
+        const result = await prisma.refreshToken.updateMany({
           where: { token: refreshToken },
           data: { revoked: true }
         });
-        console.log('[Hub Auth] Token revogado no banco.');
+        console.log('[Hub Auth] Token revogado no banco. Registros atualizados:', result.count);
+      } else {
+        console.warn('[Hub Auth] Nenhum refresh token recebido no logout.');
       }
     } catch (e) {
       console.error('[Hub Auth] Erro ao revogar token:', e.message);

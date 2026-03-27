@@ -4,14 +4,11 @@ const REFRESH_KEY = 'sid_refresh_token';
 const USER_KEY    = 'sid_user';
 
 async function clearSession() {
-    // 1. Pega o refresh token do localStorage antes de apagar tudo
+    // 1. Pega o refresh token do localStorage ANTES de apagar qualquer coisa
     const refreshToken = localStorage.getItem(REFRESH_KEY);
 
-    // 2. Limpa o armazenamento local
-    localStorage.clear();
-
     try {
-        // 3. Faz o logout no servidor esperando a resposta (await)
+        // 2. Faz o logout no servidor esperando a resposta (await)
         await fetch('/api/auth/logout', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -22,6 +19,9 @@ async function clearSession() {
     } catch (e) {
         console.warn('[Auth] Erro ao avisar o servidor do logout:', e);
     }
+
+    // 3. Limpa o armazenamento local SOMENTE DEPOIS da resposta do servidor
+    localStorage.clear();
 }
 
 async function handleLogout() {
@@ -30,4 +30,4 @@ async function handleLogout() {
         await clearSession();
         window.location.href = '/login';
     }
-}
+}
