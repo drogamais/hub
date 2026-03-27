@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = data.redirect;
             } else {
                 // Login Normal no Hub
-                res = await fetch('/api/auth/login/', {
+                res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
