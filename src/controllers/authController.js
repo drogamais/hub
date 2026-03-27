@@ -3,6 +3,11 @@ const prisma = require('../lib/prisma');
 const { generateAccessToken, generateRefreshTokenString } = require('../lib/token');
 const { resolveAppPermissionsForUser } = require('../lib/permissions');
 
+// Cookie configuration from environment
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || 'localhost';
+const COOKIE_SAME_SITE = process.env.COOKIE_SAME_SITE || 'lax';
+const COOKIE_SECURE = String(process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
+
 function sanitizeUser(user) {
   if (!user) return null;
   const u = { ...user };
@@ -45,15 +50,16 @@ const authController = {
     });
 
     // 3. Define os Cookies (para o SSR do Hub)
+    const baseCookieOpts = { path: '/', httpOnly: true, sameSite: COOKIE_SAME_SITE, domain: COOKIE_DOMAIN, secure: COOKIE_SECURE };
+
     reply.setCookie('sso_access_token', access, { 
-      path: '/', httpOnly: true, sameSite: 'lax', maxAge: 1 * 60 
+      ...baseCookieOpts,
+      maxAge: 1 * 60 // seconds
     });
     
     // Guardamos o refresh em cookie para usar no endpoint de logout (MaxAge 1 dia)
     reply.setCookie('sso_refresh_token', refreshString, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
+      ...baseCookieOpts,
       maxAge: 1 * 24 * 60 * 60, // 1 dia em segundos
     });
 
@@ -76,8 +82,8 @@ const authController = {
       }
     }
 
-    reply.clearCookie('sso_access_token', { path: '/' });
-    reply.clearCookie('sso_refresh_token', { path: '/' });
+    reply.clearCookie('sso_access_token', { path: '/', domain: COOKIE_DOMAIN });
+    reply.clearCookie('sso_refresh_token', { path: '/', domain: COOKIE_DOMAIN });
     return reply.send({ ok: true });
   }
   ,
@@ -95,9 +101,11 @@ const authController = {
     console.log('[Hub Auth] Session renewed for user:', result.user.username);
     
     // If it came from cookie, we update the access cookie
+    const baseCookieOpts = { path: '/', httpOnly: true, sameSite: COOKIE_SAME_SITE, domain: COOKIE_DOMAIN, secure: COOKIE_SECURE };
     if (request.cookies.sso_refresh_token) {
       reply.setCookie('sso_access_token', result.access, { 
-        path: '/', httpOnly: true, sameSite: 'lax', maxAge: 1 * 60 
+        ...baseCookieOpts,
+        maxAge: 1 * 60 
       });
     }
 
@@ -105,7 +113,8 @@ const authController = {
     // e.g. send 'x-set-sso-cookie: 1' to have the hub set the sso_access_token cookie.
     if (!request.cookies.sso_refresh_token && request.headers && request.headers['x-set-sso-cookie'] === '1') {
       reply.setCookie('sso_access_token', result.access, { 
-        path: '/', httpOnly: true, sameSite: 'lax', maxAge: 1 * 60 
+        ...baseCookieOpts,
+        maxAge: 1 * 60
       });
     }
 

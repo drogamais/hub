@@ -3,7 +3,22 @@ const prisma = require('../lib/prisma');
 
 async function pagesRoutes(fastify) {
   // Rotas públicas
-  fastify.get('/login', async (request, reply) => reply.view('login.ejs'));
+  fastify.get('/login', async (request, reply) => {
+    const refreshToken = request.cookies && request.cookies.sso_refresh_token;
+    const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || 'localhost';
+    if (refreshToken) {
+      try {
+        const result = await require('../lib/authService').refreshSession(refreshToken);
+        if (result) return reply.redirect('/app/hub');
+        // invalid refresh: clear cookie and render login
+        reply.clearCookie('sso_refresh_token', { path: '/', domain: COOKIE_DOMAIN });
+      } catch (e) {
+        // on any error, clear cookie and render login
+        reply.clearCookie('sso_refresh_token', { path: '/', domain: COOKIE_DOMAIN });
+      }
+    }
+    return reply.view('login.ejs');
+  });
 
   // Rotas protegidas (Usa o novo authenticate)
   fastify.register(async function(protected) {

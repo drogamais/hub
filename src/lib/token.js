@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 function generateAccessToken(payload) {
   // short lived JWT
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '1m' });
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '15m' });
 }
 
 function verifyAccessToken(token) {

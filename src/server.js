@@ -10,8 +10,12 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   process.exit(1);
 }
 
-// Allowed origins for CORS (comma-separated) — add your apps in .env as ALLOWED_ORIGINS
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim()).filter(Boolean);
+// Allowed origins for CORS (comma-separated) — configure via CORS_ORIGINS in .env
+// Example: CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 // ─── Plugins ─────────────────────────────────────────────────────
 fastify.register(require('@fastify/formbody'));
